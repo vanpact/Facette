@@ -78,7 +78,7 @@ Zero runtime dependencies. `devDependencies` only: TypeScript, tsup, vitest.
 packages/core/src/
 ├── types.ts                     # All shared types + interface definitions
 ├── math.ts                      # Vec3/Mat3: dot, cross, normalize, scale, add, sub, matMul
-├── color-conversion.ts          # [1] sRGB ↔ linear RGB ↔ OKLab + Jacobians
+├── color-conversion.ts          # [1] sRGB ↔ linear RGB ↔ OKLab ↔ OKLCh + Jacobians
 ├── gamut-clipping.ts            # [1b] Bottosson's gamut_clip_preserve_chroma
 ├── svd.ts                       # [2] Jacobi SVD for small matrices
 ├── dimensionality.ts            # [2] SVD-based dimensionality detection
@@ -86,6 +86,7 @@ packages/core/src/
 ├── barycentric.ts               # Barycentric: compute, validate, interpolate, clamp+renorm
 ├── seed-classification.ts       # [2b] hull-vertex / boundary / interior
 ├── atlas.ts                     # [2c] Face atlas: local bases, adjacency, degeneracy flags
+├── line-segment.ts              # [2d] 1D line segment constraint + parameterization
 ├── surface-navigation.ts        # [6a] Tangent projection, edge crossing, face transitions
 ├── warp.ts                      # [3] f(r), transform T, Jacobian J_T, warped distance
 ├── energy.ts                    # [4] Riesz repulsion + gamut penalty + all gradients
@@ -109,28 +110,33 @@ interface OKLab { L: number; a: number; b: number }
 interface OKLCh { L: number; C: number; h: number }
 interface LinRGB { r: number; g: number; b: number }
 
-interface Barycentric { l0: number; l1: number; l2: number }
+interface Barycentric { w0: number; w1: number; w2: number }
 
-interface Face {
-  vertexIndices: [number, number, number];
-  basisU: Vec3;
-  basisV: Vec3;
-  normal: Vec3;
-  area: number;
-  degenerate: boolean;
-}
+// Edge keys use canonical vertex ordering: `${min(i,j)}-${max(i,j)}`
+type EdgeKey = string;
 
+// HullGeometry exposes only topology. Computed properties (bases, areas,
+// degeneracy flags) are accessed exclusively through AtlasQuery (LoD).
 interface HullGeometry {
   vertices: OKLab[];
-  faces: Face[];
-  adjacency: Map<string, number>;  // edge key → adjacent face index
+  faces: Array<{ vertexIndices: [number, number, number] }>;
+  adjacency: Map<EdgeKey, number>;
+}
+
+// LineGeometry for the 1D case (2 seeds or collinear seeds).
+// Particles are parameterized by scalar t ∈ [0, 1] along the segment.
+interface LineGeometry {
+  start: OKLab;
+  end: OKLab;
 }
 
 type Particle =
   | { kind: 'pinned-vertex';   position: OKLab; vertexIndex: number }
   | { kind: 'pinned-boundary'; position: OKLab; faceIndex: number; bary: Barycentric }
   | { kind: 'pinned-interior'; position: OKLab }
-  | { kind: 'free';            position: OKLab; faceIndex: number; bary: Barycentric };
+  | { kind: 'free';            position: OKLab; faceIndex: number; bary: Barycentric }
+  | { kind: 'pinned-endpoint'; position: OKLab; t: number }
+  | { kind: 'free-1d';         position: OKLab; t: number };
 ```
 
 #### Narrow Interfaces
@@ -140,12 +146,18 @@ interface WarpTransform {
   toWarped(pos: OKLab): OKLab;
   fromWarped(pos: OKLab): OKLab;
   pullBackGradient(pos: OKLab, gradWarped: Vec3): Vec3;
+  /** The r_s value used by this transform, exposed for trace metadata. */
+  readonly rs: number;
 }
 
+/**
+ * ForceComputer is constructed with WarpTransform and GamutChecker
+ * injected (DIP). Only per-iteration parameters (p, kappa) are
+ * passed at call time since they change via annealing.
+ */
 interface ForceComputer {
   computeForces(
     particles: readonly Particle[],
-    warp: WarpTransform,
     p: number,
     kappa: number
   ): Vec3[];
@@ -154,20 +166,27 @@ interface ForceComputer {
 interface AtlasQuery {
   getFaceBasis(faceIndex: number): { u: Vec3; v: Vec3; normal: Vec3 };
   getFaceVertices(faceIndex: number): [OKLab, OKLab, OKLab];
-  getAdjacentFace(faceIndex: number, edgeKey: string): number | null;
+  getAdjacentFace(faceIndex: number, edgeKey: EdgeKey): number | null;
   getFaceArea(faceIndex: number): number;
   isDegenerate(faceIndex: number): boolean;
   faceCount(): number;
 }
 
-interface SurfaceConstraint {
-  projectToTangent(force: Vec3, faceIndex: number): Vec3;
-  applyDisplacement(
-    particle: Particle & { kind: 'free' },
-    displacement: Vec3
-  ): Particle & { kind: 'free' };
+/**
+ * MotionConstraint is the unified interface for constraining particle
+ * motion. Implemented by SurfaceConstraint (2D/3D hull) and
+ * LineConstraint (1D segment). optimization.ts depends only on this.
+ */
+interface MotionConstraint {
+  projectToTangent(force: Vec3, particle: Particle): Vec3;
+  applyDisplacement(particle: Particle, displacement: Vec3): Particle;
 }
 
+/**
+ * GamutChecker.penaltyGradient returns ∇E_gamut in OKLab coordinates,
+ * i.e. the linear-RGB channel penalties already chain-ruled through
+ * the OKLab→linear-RGB Jacobian (Section 5.2 of algorithm spec).
+ */
 interface GamutChecker {
   isInGamut(pos: OKLab): boolean;
   clipPreserveChroma(pos: OKLab): OKLab;
@@ -177,6 +196,7 @@ interface GamutChecker {
 interface AnnealingSchedule {
   getStepSize(iteration: number): number;
   getRieszExponent(iteration: number): number;
+  getGamutPenaltyWeight(iteration: number): number;
   isConverged(
     iteration: number,
     energy: number,
@@ -192,6 +212,7 @@ interface AnnealingSchedule {
 interface OptimizationFrame {
   iteration: number;
   particles: Particle[];
+  warpedPositions: OKLab[];    // warped position per particle (for morph animation)
   energy: number;
   minDeltaE: number;
   p: number;
@@ -199,10 +220,12 @@ interface OptimizationFrame {
 }
 
 interface OptimizationTrace {
-  hull: HullGeometry;
+  hull: HullGeometry;          // or LineGeometry for 1D case
   seeds: Particle[];
   frames: OptimizationFrame[];
-  finalColors: string[];
+  finalColors: string[];       // hex sRGB after gamut clipping
+  clippedIndices: number[];    // indices of colors that required final gamut clipping
+  rs: number;                  // the r_s value used (for webapp display / warp reconstruction)
 }
 ```
 
@@ -218,6 +241,7 @@ math.ts                                       ← pure functions, zero imports
 barycentric.ts                                ← depends on: math, types
     ↑
 color-conversion.ts                           ← depends on: math, types
+    │                                            includes: sRGB ↔ linear RGB ↔ OKLab ↔ OKLCh
     ↑
 gamut-clipping.ts                             ← depends on: color-conversion, types
     │                                            implements: GamutChecker
@@ -231,18 +255,23 @@ seed-classification.ts                        ← depends on: barycentric, types
 atlas.ts                                      ← depends on: math, barycentric, types
     │                                            implements: AtlasQuery
     ↑
+line-segment.ts                               ← depends on: math, types
+    │                                            implements: MotionConstraint (1D)
+    ↑
 surface-navigation.ts                         ← depends on: AtlasQuery, barycentric, math
-    │                                            implements: SurfaceConstraint
+    │                                            implements: MotionConstraint (2D/3D)
     ↑
 warp.ts                                       ← depends on: math, types
     │                                            implements: WarpTransform
     ↑
-energy.ts                                     ← depends on: WarpTransform, GamutChecker, math
+energy.ts                                     ← constructed with WarpTransform + GamutChecker
     │                                            implements: ForceComputer
+    │                                            (WarpTransform and GamutChecker are injected
+    │                                             at construction, not passed per call)
     ↑
 initialization.ts                             ← depends on: WarpTransform, AtlasQuery, types
     ↑
-optimization.ts                               ← depends on: ForceComputer, SurfaceConstraint,
+optimization.ts                               ← depends on: ForceComputer, MotionConstraint,
     │                                            AnnealingSchedule (interfaces only)
     │                                            yields: OptimizationFrame (generator)
     ↑
@@ -251,6 +280,9 @@ output.ts                                     ← depends on: GamutChecker, colo
 facette.ts                                    ← COMPOSITION ROOT
     │                                            imports ALL concrete modules
     │                                            wires concrete → interface
+    │                                            selects MotionConstraint by dimensionality:
+    │                                              dim=1 → LineConstraint
+    │                                              dim=2/3 → SurfaceConstraint
     │                                            exports: generatePalette, createPaletteStepper
     ↑
 index.ts                                      ← re-exports public API + types only
@@ -263,15 +295,15 @@ index.ts                                      ← re-exports public API + types 
 | SRP | Each module has exactly one reason to change. `warp.ts` changes only if warping math changes. `surface-navigation.ts` changes only if constraint geometry changes. `optimization.ts` does only physics loop orchestration. |
 | OCP | Interface-based design: swap `WarpTransform` implementation (e.g., identity warp for testing) without touching `energy.ts` or `optimization.ts`. Add new energy terms by composing `ForceComputer` implementations. |
 | LSP | Discriminated union `Particle` with exhaustive `switch`. All variants substitutable wherever `Particle` is expected. The `kind` field drives behavior, not subclass overrides. |
-| ISP | Each module consumes the narrowest interface it needs. `energy.ts` sees `WarpTransform` (2 methods), not the full warp module. `optimization.ts` sees `ForceComputer` + `SurfaceConstraint`, never atlas or hull internals. |
-| DIP | All inter-module dependencies point at interfaces in `types.ts`. Only `facette.ts` (composition root) imports concrete implementations. Every other module is testable with mock implementations. |
+| ISP | Each module consumes the narrowest interface it needs. `energy.ts` sees `WarpTransform` (3 methods) and `GamutChecker` (3 methods), injected at construction. `optimization.ts` sees `ForceComputer` + `MotionConstraint`, never atlas or hull internals. |
+| DIP | All inter-module dependencies point at interfaces in `types.ts`. Only `facette.ts` (composition root) imports concrete implementations. Every other module is testable with mock implementations. `ForceComputer` receives `WarpTransform` and `GamutChecker` via constructor injection, not per-call parameters. |
 
 ### Law of Demeter Compliance
 
 - No deep property chains. Modules call methods on their direct interface dependencies, never reaching through returned objects.
 - `atlas.ts` exposes query functions (`getFaceBasis`, `getAdjacentFace`), not raw `Face[]` arrays.
 - `surface-navigation.ts` wraps atlas queries into `projectToTangent` and `applyDisplacement` — `optimization.ts` never touches atlas directly.
-- `optimization.ts` talks only to `ForceComputer`, `SurfaceConstraint`, and `AnnealingSchedule`. It has no knowledge of hull geometry, warp internals, or gamut clipping.
+- `optimization.ts` talks only to `ForceComputer`, `MotionConstraint`, and `AnnealingSchedule`. It has no knowledge of hull geometry, warp internals, or gamut clipping. The same loop works for 1D (line segment) and 2D/3D (hull surface) — the `MotionConstraint` implementation differs, but the optimizer doesn't know or care.
 
 ### Generator Pattern (Core Engine)
 
@@ -280,11 +312,11 @@ index.ts                                      ← re-exports public API + types 
 function* createOptimizationStepper(
   particles: Particle[],
   forces: ForceComputer,
-  surface: SurfaceConstraint,
+  constraint: MotionConstraint,   // LineConstraint or SurfaceConstraint
   warp: WarpTransform,
   schedule: AnnealingSchedule
 ): Generator<OptimizationFrame> {
-  // yields one frame per iteration
+  // yields one frame per iteration, including warpedPositions
 }
 
 // facette.ts — composition root
@@ -339,14 +371,18 @@ interface PaletteResult {
 }
 
 interface PaletteStepper {
-  hull: HullGeometry;
+  hull: HullGeometry | LineGeometry;  // topology depends on dimensionality
   seeds: Particle[];
-  step(): Generator<OptimizationFrame>;
+  /** Returns a generator that yields one OptimizationFrame per iteration.
+   *  The generator is created once and cached — calling frames() again
+   *  returns the same generator (you cannot restart the optimization). */
+  frames(): Generator<OptimizationFrame>;
+  /** Drains all frames and returns the complete trace with final colors. */
   run(): OptimizationTrace;
 }
 ```
 
-Geometry types (`HullGeometry`, `Particle`, `OKLab`, `OKLCh`, `OptimizationFrame`, `OptimizationTrace`) are also re-exported for webapp consumption.
+Geometry types (`HullGeometry`, `LineGeometry`, `Particle`, `OKLab`, `OKLCh`, `OptimizationFrame`, `OptimizationTrace`) are also re-exported for webapp consumption.
 
 ### Input Validation
 
@@ -375,7 +411,7 @@ import { createPaletteStepper } from 'facette';
 const stepper = createPaletteStepper(['#e63946', '#457b9d', '#1d3557'], 8);
 
 // Frame-by-frame
-for (const frame of stepper.step()) {
+for (const frame of stepper.frames()) {
   render3D(frame.particles);
   plotEnergy(frame.iteration, frame.energy);
 }
@@ -545,6 +581,7 @@ Each module gets a test file validating its interface contract. Modules are test
 | `barycentric.test.ts` | Vertices → (1,0,0). Centroid → (⅓,⅓,⅓). Out-of-face detection. Clamp+renormalize |
 | `seed-classification.test.ts` | Vertices → `pinned-vertex`. On-face → `pinned-boundary`. Inside → `pinned-interior` |
 | `atlas.test.ts` | Basis orthonormality. Adjacency correctness. Degenerate flagging. Query correctness |
+| `line-segment.test.ts` | 1D constraint: tangent projection along segment. Displacement clamps to [0,1]. Endpoint particles immobile |
 | `surface-navigation.test.ts` | Tangent projection. In-face displacement. Edge crossing. Boundary clamping |
 | `warp.test.ts` | f(0)=0, f'(0)=0. Contraction at low r. Identity at high r. Hue preservation. Jacobian via finite-difference |
 | `energy.test.ts` | Repulsive force direction. Energy decreases with distance. Gamut penalty=0 in gamut. Gradient via finite-difference |
