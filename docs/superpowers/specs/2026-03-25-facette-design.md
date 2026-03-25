@@ -118,6 +118,7 @@ type EdgeKey = string;
 // HullGeometry exposes only topology. Computed properties (bases, areas,
 // degeneracy flags) are accessed exclusively through AtlasQuery (LoD).
 interface HullGeometry {
+  kind: 'hull';
   vertices: OKLab[];
   faces: Array<{ vertexIndices: [number, number, number] }>;
   adjacency: Map<EdgeKey, number>;
@@ -126,9 +127,12 @@ interface HullGeometry {
 // LineGeometry for the 1D case (2 seeds or collinear seeds).
 // Particles are parameterized by scalar t ∈ [0, 1] along the segment.
 interface LineGeometry {
+  kind: 'line';
   start: OKLab;
   end: OKLab;
 }
+
+type Geometry = HullGeometry | LineGeometry;
 
 type Particle =
   | { kind: 'pinned-vertex';   position: OKLab; vertexIndex: number }
@@ -220,7 +224,7 @@ interface OptimizationFrame {
 }
 
 interface OptimizationTrace {
-  hull: HullGeometry;          // or LineGeometry for 1D case
+  geometry: Geometry;           // HullGeometry | LineGeometry, narrowable via kind
   seeds: Particle[];
   frames: OptimizationFrame[];
   finalColors: string[];       // hex sRGB after gamut clipping
@@ -272,7 +276,9 @@ energy.ts                                     ← constructed with WarpTransform
 initialization.ts                             ← depends on: WarpTransform, AtlasQuery, types
     ↑
 optimization.ts                               ← depends on: ForceComputer, MotionConstraint,
-    │                                            AnnealingSchedule (interfaces only)
+    │                                            WarpTransform, AnnealingSchedule (interfaces only)
+    │                                            WarpTransform used solely to compute
+    │                                            warpedPositions for each frame
     │                                            yields: OptimizationFrame (generator)
     ↑
 output.ts                                     ← depends on: GamutChecker, color-conversion
@@ -371,7 +377,7 @@ interface PaletteResult {
 }
 
 interface PaletteStepper {
-  hull: HullGeometry | LineGeometry;  // topology depends on dimensionality
+  geometry: Geometry;           // HullGeometry | LineGeometry, narrowable via kind
   seeds: Particle[];
   /** Returns a generator that yields one OptimizationFrame per iteration.
    *  The generator is created once and cached — calling frames() again
@@ -382,7 +388,7 @@ interface PaletteStepper {
 }
 ```
 
-Geometry types (`HullGeometry`, `LineGeometry`, `Particle`, `OKLab`, `OKLCh`, `OptimizationFrame`, `OptimizationTrace`) are also re-exported for webapp consumption.
+Geometry types (`HullGeometry`, `LineGeometry`, `Geometry`, `Particle`, `OKLab`, `OKLCh`, `OptimizationFrame`, `OptimizationTrace`) are also re-exported for webapp consumption.
 
 ### Input Validation
 
