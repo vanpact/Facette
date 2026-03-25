@@ -121,7 +121,7 @@ interface HullGeometry {
   kind: 'hull';
   vertices: OKLab[];
   faces: Array<{ vertexIndices: [number, number, number] }>;
-  adjacency: Map<EdgeKey, number>;
+  adjacency: Map<EdgeKey, [number, number]>;  // edge → [faceA, faceB]
 }
 
 // LineGeometry for the 1D case (2 seeds or collinear seeds).
@@ -158,19 +158,20 @@ interface WarpTransform {
  * ForceComputer is constructed with WarpTransform and GamutChecker
  * injected (DIP). Only per-iteration parameters (p, kappa) are
  * passed at call time since they change via annealing.
+ * Returns forces AND scalar energy in one pass (shared pairwise distances).
  */
 interface ForceComputer {
-  computeForces(
+  computeForcesAndEnergy(
     particles: readonly Particle[],
     p: number,
     kappa: number
-  ): Vec3[];
+  ): { forces: Vec3[]; energy: number };
 }
 
 interface AtlasQuery {
   getFaceBasis(faceIndex: number): { u: Vec3; v: Vec3; normal: Vec3 };
   getFaceVertices(faceIndex: number): [OKLab, OKLab, OKLab];
-  getAdjacentFace(faceIndex: number, edgeKey: EdgeKey): number | null;
+  getAdjacentFace(faceIndex: number, edgeKey: EdgeKey): number | null;  // returns the OTHER face sharing this edge
   getFaceArea(faceIndex: number): number;
   isDegenerate(faceIndex: number): boolean;
   faceCount(): number;
