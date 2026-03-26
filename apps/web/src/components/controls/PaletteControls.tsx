@@ -33,7 +33,11 @@ export function PaletteControls() {
           min={0}
           max={100}
           value={vividness * 1000}
-          onChange={(e) => setVividness(Number(e.target.value) / 1000)}
+          onChange={(e) => {
+            const raw = Number(e.target.value) / 1000;
+            // Snap values below 0.005 to 0 (auto mode) to avoid invalid range
+            setVividness(raw > 0 && raw < 0.005 ? 0 : raw);
+          }}
           onMouseUp={regenerate}
           className="w-24"
         />
