@@ -73,10 +73,10 @@ function generate5x5BaryGrid(): Barycentric[] {
 /**
  * Place N particles along a line segment. Seeds (pinned-endpoint particles)
  * are preserved as-is. Remaining N - seeds.length particles are placed at
- * equal parametric intervals as free-1d particles.
+ * equal parametric intervals as free-1d particles, avoiding seed positions.
  *
- * With 2 endpoint seeds at t=0 and t=1, N-1 intervals are created and
- * free particles are placed at interior positions t = i/(N-1).
+ * Generates N evenly-spaced t values along [0, 1], assigns seeds to the
+ * closest slots, and fills the remaining slots with free particles.
  */
 export function initializeParticles1D(
   seeds: Particle[],
@@ -87,22 +87,39 @@ export function initializeParticles1D(
   const needed = n - seeds.length;
   if (needed <= 0) return result;
 
-  // With endpoints at t=0 and t=1, there are N-1 intervals total.
-  // Interior t values are i/(N-1) for i = 1 .. N-2.
-  // This gives n-2 free particles placed between the two endpoints.
-  // More generally, place free particles at equal spacing among the N slots.
-
-  // The t values for all N particles are: 0, 1/(N-1), 2/(N-1), ..., 1
-  // Seeds occupy t=0 and t=1, so free particles occupy the interior slots.
+  // Generate n evenly-spaced t slots: 0, 1/(n-1), 2/(n-1), ..., 1
   const totalIntervals = n - 1;
-  for (let i = 1; i < n - 1; i++) {
-    const t = i / totalIntervals;
+  const slots: number[] = [];
+  for (let i = 0; i < n; i++) {
+    slots.push(i / totalIntervals);
+  }
+
+  // Collect seed t values
+  const seedTs = new Set<number>();
+  for (const s of seeds) {
+    if (s.kind === 'pinned-endpoint' || s.kind === 'free-1d') {
+      seedTs.add(s.t);
+    }
+  }
+
+  // Find free slots: those not within 1e-9 of any seed t
+  for (const slotT of slots) {
+    let occupiedBySeed = false;
+    for (const seedT of seedTs) {
+      if (Math.abs(slotT - seedT) < 1e-9) {
+        occupiedBySeed = true;
+        break;
+      }
+    }
+    if (occupiedBySeed) continue;
+    if (result.length >= n) break;
+
     const position: OKLab = {
-      L: line.start.L + t * (line.end.L - line.start.L),
-      a: line.start.a + t * (line.end.a - line.start.a),
-      b: line.start.b + t * (line.end.b - line.start.b),
+      L: line.start.L + slotT * (line.end.L - line.start.L),
+      a: line.start.a + slotT * (line.end.a - line.start.a),
+      b: line.start.b + slotT * (line.end.b - line.start.b),
     };
-    result.push({ kind: 'free-1d', position, t });
+    result.push({ kind: 'free-1d', position, t: slotT });
   }
 
   return result;
