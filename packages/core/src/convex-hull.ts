@@ -99,43 +99,23 @@ function buildCoplanarHull(points: OKLab[]): HullGeometry {
   const hullIndices = convexHull2D(pts2d);
 
   // Triangulate via fan from hullIndices[0]
+  // Front faces get even indices (0, 2, 4, ...), back faces get odd (1, 3, 5, ...)
   const faces: Array<{ vertexIndices: [number, number, number] }> = [];
-  const adjacency = new Map<EdgeKey, [number, number]>();
 
   const h0 = hullIndices[0];
   for (let k = 1; k + 1 < hullIndices.length; k++) {
     const h1 = hullIndices[k];
     const h2 = hullIndices[k + 1];
-    // Front face
-    const fi = faces.length;
-    faces.push({ vertexIndices: [h0, h1, h2] });
-    // Back face (flipped winding)
-    const bi = faces.length;
-    faces.push({ vertexIndices: [h0, h2, h1] });
-
-    // Register interior edges (between adjacent triangles in the fan)
-    // Interior edge: h0-h2 is shared by triangle k and k+1 (front faces)
-    // We only register edges as we see them twice
-    for (const [ei, ej] of [[h0, h1], [h1, h2], [h0, h2]] as [number,number][]) {
-      const key = makeEdgeKey(ei, ej);
-      const existing = adjacency.get(key);
-      if (existing === undefined) {
-        adjacency.set(key, [fi, bi]); // tentatively
-      } else {
-        adjacency.set(key, [existing[0], fi]);
-      }
-    }
-    for (const [ei, ej] of [[h0, h1], [h1, h2], [h0, h2]] as [number,number][]) {
-      const key = makeEdgeKey(ei, ej);
-      const existing = adjacency.get(key);
-      if (existing !== undefined && existing[1] === bi) {
-        // correct: this edge is shared between front (fi) and back (bi) of same triangle
-        adjacency.set(key, [fi, bi]);
-      }
-    }
+    faces.push({ vertexIndices: [h0, h1, h2] });      // front face (even index)
+    faces.push({ vertexIndices: [h0, h2, h1] });       // back face (odd index)
   }
 
-  // Rebuild adjacency properly: for each edge, collect all face indices that use it
+  // Build adjacency with correct same-side pairing for internal fan edges.
+  // For each edge, collect all face indices that use it, then pair correctly:
+  //   - Boundary edges (2 faces): pair front ↔ back of same triangle
+  //   - Internal fan edges (4 faces): pair front ↔ front (adjacent triangles)
+  //     Back faces connect to front faces via boundary edges, so the full
+  //     surface remains navigable: B_k → F_k → F_{k+1} → B_{k+1}
   const edgeToFaces = new Map<EdgeKey, number[]>();
   for (let fi = 0; fi < faces.length; fi++) {
     const [a, b, c] = faces[fi].vertexIndices;
@@ -145,10 +125,21 @@ function buildCoplanarHull(points: OKLab[]): HullGeometry {
       edgeToFaces.get(key)!.push(fi);
     }
   }
+
   const adj2 = new Map<EdgeKey, [number, number]>();
   for (const [key, fis] of edgeToFaces) {
-    if (fis.length >= 2) {
+    if (fis.length === 2) {
+      // Boundary edge: connects front ↔ back of same triangle
       adj2.set(key, [fis[0], fis[1]]);
+    } else if (fis.length >= 4) {
+      // Internal fan edge shared by 4+ faces.
+      // Pair the two front faces (even indices) for same-side navigation.
+      const frontFaces = fis.filter(fi => fi % 2 === 0);
+      if (frontFaces.length >= 2) {
+        adj2.set(key, [frontFaces[0], frontFaces[1]]);
+      } else {
+        adj2.set(key, [fis[0], fis[1]]);
+      }
     }
   }
 
