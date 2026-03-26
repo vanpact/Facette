@@ -68,9 +68,9 @@
   <!-- Palette preview strip -->
   <g transform="translate(50, 158)">
     <rect x="0" y="0" width="26" height="26" rx="5" fill="#e63946"/>
-    <rect x="30" y="0" width="26" height="26" rx="5" fill="#d45553"/>
-    <rect x="60" y="0" width="26" height="26" rx="5" fill="#a77b6c"/>
-    <rect x="90" y="0" width="26" height="26" rx="5" fill="#6e9282"/>
+    <rect x="30" y="0" width="26" height="26" rx="5" fill="#f0932b"/>
+    <rect x="60" y="0" width="26" height="26" rx="5" fill="#b07541"/>
+    <rect x="90" y="0" width="26" height="26" rx="5" fill="#8e3e4e"/>
     <rect x="120" y="0" width="26" height="26" rx="5" fill="#2a9d8f"/>
     <rect x="150" y="0" width="26" height="26" rx="5" fill="#457b9d"/>
     <rect x="180" y="0" width="26" height="26" rx="5" fill="#1d3557"/>

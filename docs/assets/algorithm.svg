@@ -9,21 +9,15 @@
   <rect width="800" height="180" fill="url(#abg)" rx="12"/>
 
   <!--
-    Tetrahedron vertices (2D projection, consistent everywhere):
+    Tetrahedron vertices (2D projection):
       A = (55, 22)   top/apex        → #e63946
       B = (12, 98)   bottom-left     → #2a9d8f
       C = (98, 78)   right           → #457b9d
       D = (48, 58)   inner/back      → #f0932b
-
-    Face centroids (where free particles go):
-      ABD = (38, 59)    → #6e9282
-      ACD = (67, 53)    → #c4884a
-      BCD = (53, 78)    → #3b8a8a
-      ABC = (55, 66)    → #a77b6c
   -->
 
   <!-- ═══ Stage 1: Seeds ═══ -->
-  <g transform="translate(30, 18)">
+  <g transform="translate(15, 18)">
     <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">SEEDS</text>
     <circle cx="55" cy="32" r="9" fill="#e63946"/>
     <circle cx="12" cy="98" r="9" fill="#2a9d8f"/>
@@ -32,123 +26,111 @@
   </g>
 
   <!-- Arrow 1 -->
-  <g transform="translate(138, 62)">
-    <line x1="0" y1="0" x2="30" y2="0" stroke="#484f58" stroke-width="1.5"/>
-    <polygon points="30,-4 38,0 30,4" fill="#484f58"/>
+  <g transform="translate(120, 62)">
+    <line x1="0" y1="0" x2="24" y2="0" stroke="#484f58" stroke-width="1.5"/>
+    <polygon points="24,-4 32,0 24,4" fill="#484f58"/>
   </g>
 
-  <!-- ═══ Stage 2: Convex Hull ═══ -->
-  <g transform="translate(182, 18)">
-    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">CONVEX HULL</text>
-    <!-- Front face: A-B, A-C, B-C -->
-    <line x1="55" y1="22" x2="12" y2="98" stroke="#6e7681" stroke-width="1" opacity="0.5"/>
-    <line x1="55" y1="22" x2="98" y2="78" stroke="#6e7681" stroke-width="1" opacity="0.5"/>
-    <line x1="12" y1="98" x2="98" y2="78" stroke="#6e7681" stroke-width="1" opacity="0.5"/>
-    <!-- Back edges to D (dashed) -->
-    <line x1="55" y1="22" x2="48" y2="58" stroke="#6e7681" stroke-width="0.7" opacity="0.25" stroke-dasharray="4,3"/>
-    <line x1="12" y1="98" x2="48" y2="58" stroke="#6e7681" stroke-width="0.7" opacity="0.25" stroke-dasharray="4,3"/>
-    <line x1="98" y1="78" x2="48" y2="58" stroke="#6e7681" stroke-width="0.7" opacity="0.25" stroke-dasharray="4,3"/>
-    <!-- Seed vertices -->
-    <circle cx="55" cy="22" r="5" fill="#e63946"/>
-    <circle cx="12" cy="98" r="5" fill="#2a9d8f"/>
-    <circle cx="98" cy="78" r="5" fill="#457b9d"/>
-    <circle cx="48" cy="58" r="5" fill="#f0932b"/>
-    <!-- Free particles at face centroids -->
-    <circle cx="38" cy="59" r="3" fill="#6e9282" opacity="0.8"/>
-    <circle cx="67" cy="53" r="3" fill="#c4884a" opacity="0.8"/>
-    <circle cx="53" cy="78" r="3" fill="#3b8a8a" opacity="0.8"/>
-    <circle cx="55" cy="66" r="3" fill="#a77b6c" opacity="0.8"/>
-    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">particles on surface</text>
+  <!-- ═══ Stage 2: Radial Lift ═══ -->
+  <g transform="translate(155, 18)">
+    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">RADIAL LIFT</text>
+    <!-- Gray axis (L axis = x=55 vertical) -->
+    <line x1="55" y1="16" x2="55" y2="110" stroke="#484f58" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
+    <!-- Seeds contracted toward gray axis: low-chroma seeds move closer, high-chroma stay -->
+    <!-- A at (55,22) — high chroma, stays near same position -->
+    <circle cx="55" cy="22" r="5" fill="#e63946" opacity="0.4"/>
+    <circle cx="56" cy="22" r="5" fill="#e63946"/>
+    <!-- B at (12,98) — high chroma, stays near -->
+    <circle cx="12" cy="98" r="5" fill="#2a9d8f" opacity="0.4"/>
+    <circle cx="15" cy="98" r="5" fill="#2a9d8f"/>
+    <!-- C at (98,78) — high chroma, stays near -->
+    <circle cx="98" cy="78" r="5" fill="#457b9d" opacity="0.4"/>
+    <circle cx="95" cy="78" r="5" fill="#457b9d"/>
+    <!-- D at (48,58) — lower chroma, contracts toward gray axis -->
+    <circle cx="48" cy="58" r="4" fill="#f0932b" opacity="0.4"/>
+    <circle cx="51" cy="58" r="5" fill="#f0932b"/>
+    <!-- Arrows showing contraction -->
+    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="8" text-anchor="middle" font-style="italic">gray contracts</text>
   </g>
 
   <!-- Arrow 2 -->
-  <g transform="translate(310, 62)">
-    <line x1="0" y1="0" x2="30" y2="0" stroke="#484f58" stroke-width="1.5"/>
-    <polygon points="30,-4 38,0 30,4" fill="#484f58"/>
+  <g transform="translate(275, 62)">
+    <line x1="0" y1="0" x2="24" y2="0" stroke="#484f58" stroke-width="1.5"/>
+    <polygon points="24,-4 32,0 24,4" fill="#484f58"/>
   </g>
 
-  <!-- ═══ Stage 3: Warp ═══ -->
-  <g transform="translate(355, 18)">
-    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">WARP SPACE</text>
-    <!-- Gray axis (L axis = x=55 vertical) -->
-    <line x1="55" y1="16" x2="55" y2="110" stroke="#484f58" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
-    <!-- Warped tetrahedron: vertices pushed horizontally away from x=55 -->
-    <!-- A stays at (55,22) — on axis. B pushed further left (8,100). C pushed further right (102,78). D stays near (46,58). -->
-    <line x1="55" y1="22" x2="8" y2="100" stroke="#6e7681" stroke-width="0.8" opacity="0.35"/>
-    <line x1="55" y1="22" x2="102" y2="78" stroke="#6e7681" stroke-width="0.8" opacity="0.35"/>
-    <line x1="8" y1="100" x2="102" y2="78" stroke="#6e7681" stroke-width="0.8" opacity="0.35"/>
-    <line x1="55" y1="22" x2="46" y2="58" stroke="#6e7681" stroke-width="0.5" opacity="0.15" stroke-dasharray="4,3"/>
-    <line x1="8" y1="100" x2="46" y2="58" stroke="#6e7681" stroke-width="0.5" opacity="0.15" stroke-dasharray="4,3"/>
-    <line x1="102" y1="78" x2="46" y2="58" stroke="#6e7681" stroke-width="0.5" opacity="0.15" stroke-dasharray="4,3"/>
-    <text x="55" y="118" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="8" text-anchor="middle" font-style="italic">gray axis</text>
-    <!-- Warped particles at face centroids of warped hull -->
-    <!-- Warped ABD: (55+8+46)/3, (22+100+58)/3 = (36, 60) -->
-    <!-- Warped ACD: (55+102+46)/3, (22+78+58)/3 = (68, 53) -->
-    <!-- Warped BCD: (8+102+46)/3, (100+78+58)/3 = (52, 79) -->
-    <!-- Warped ABC: (55+8+102)/3, (22+100+78)/3 = (55, 67) -->
-    <circle cx="55" cy="22" r="4" fill="#e63946" opacity="0.9"/>
-    <circle cx="8" cy="100" r="4" fill="#2a9d8f" opacity="0.9"/>
-    <circle cx="102" cy="78" r="4" fill="#457b9d" opacity="0.9"/>
-    <circle cx="46" cy="58" r="4" fill="#f0932b" opacity="0.9"/>
-    <circle cx="36" cy="60" r="2.5" fill="#6e9282" opacity="0.7"/>
-    <circle cx="68" cy="53" r="2.5" fill="#c4884a" opacity="0.7"/>
-    <circle cx="52" cy="79" r="2.5" fill="#3b8a8a" opacity="0.7"/>
-    <circle cx="55" cy="67" r="2.5" fill="#a77b6c" opacity="0.7"/>
-    <text x="55" y="132" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">gray repulsion</text>
+  <!-- ═══ Stage 3: Hull in Lifted Space ═══ -->
+  <g transform="translate(312, 18)">
+    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">HULL (LIFTED)</text>
+    <!-- Lifted tetrahedron edges -->
+    <line x1="56" y1="22" x2="15" y2="98" stroke="#6e7681" stroke-width="1" opacity="0.5"/>
+    <line x1="56" y1="22" x2="95" y2="78" stroke="#6e7681" stroke-width="1" opacity="0.5"/>
+    <line x1="15" y1="98" x2="95" y2="78" stroke="#6e7681" stroke-width="1" opacity="0.5"/>
+    <line x1="56" y1="22" x2="51" y2="58" stroke="#6e7681" stroke-width="0.7" opacity="0.25" stroke-dasharray="4,3"/>
+    <line x1="15" y1="98" x2="51" y2="58" stroke="#6e7681" stroke-width="0.7" opacity="0.25" stroke-dasharray="4,3"/>
+    <line x1="95" y1="78" x2="51" y2="58" stroke="#6e7681" stroke-width="0.7" opacity="0.25" stroke-dasharray="4,3"/>
+    <!-- Seed vertices (lifted positions) -->
+    <circle cx="56" cy="22" r="5" fill="#e63946"/>
+    <circle cx="15" cy="98" r="5" fill="#2a9d8f"/>
+    <circle cx="95" cy="78" r="5" fill="#457b9d"/>
+    <circle cx="51" cy="58" r="5" fill="#f0932b"/>
+    <!-- Free particles on faces -->
+    <circle cx="38" cy="59" r="3" fill="#70927b" opacity="0.8"/>
+    <circle cx="67" cy="53" r="3" fill="#a77c68" opacity="0.8"/>
+    <circle cx="53" cy="78" r="3" fill="#3b698d" opacity="0.8"/>
+    <circle cx="55" cy="66" r="3" fill="#8e616e" opacity="0.8"/>
+    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">flat faces, exact areas</text>
   </g>
 
   <!-- Arrow 3 -->
-  <g transform="translate(483, 62)">
-    <line x1="0" y1="0" x2="30" y2="0" stroke="#484f58" stroke-width="1.5"/>
-    <polygon points="30,-4 38,0 30,4" fill="#484f58"/>
+  <g transform="translate(432, 62)">
+    <line x1="0" y1="0" x2="24" y2="0" stroke="#484f58" stroke-width="1.5"/>
+    <polygon points="24,-4 32,0 24,4" fill="#484f58"/>
   </g>
 
   <!-- ═══ Stage 4: Optimize ═══ -->
-  <g transform="translate(520, 18)">
+  <g transform="translate(460, 18)">
     <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">OPTIMIZE</text>
-    <!-- Same tetrahedron as hull stage -->
-    <line x1="55" y1="22" x2="12" y2="98" stroke="#6e7681" stroke-width="0.6" opacity="0.2"/>
-    <line x1="55" y1="22" x2="98" y2="78" stroke="#6e7681" stroke-width="0.6" opacity="0.2"/>
-    <line x1="12" y1="98" x2="98" y2="78" stroke="#6e7681" stroke-width="0.6" opacity="0.2"/>
-    <line x1="55" y1="22" x2="48" y2="58" stroke="#6e7681" stroke-width="0.4" opacity="0.1" stroke-dasharray="4,3"/>
-    <line x1="12" y1="98" x2="48" y2="58" stroke="#6e7681" stroke-width="0.4" opacity="0.1" stroke-dasharray="4,3"/>
-    <line x1="98" y1="78" x2="48" y2="58" stroke="#6e7681" stroke-width="0.4" opacity="0.1" stroke-dasharray="4,3"/>
-    <!-- Free particles spread across faces (using edge midpoints for better separation) -->
-    <!-- Seed vertices stay fixed -->
-    <circle cx="55" cy="22" r="4.5" fill="#e63946"/>
-    <circle cx="12" cy="98" r="4.5" fill="#2a9d8f"/>
-    <circle cx="98" cy="78" r="4.5" fill="#457b9d"/>
-    <circle cx="48" cy="58" r="4.5" fill="#f0932b"/>
-    <!-- Free on face ABD: 0.2A + 0.5B + 0.3D = (0.2*55+0.5*12+0.3*48, 0.2*22+0.5*98+0.3*58) = (31.4, 70.8) -->
-    <circle cx="31" cy="71" r="3.5" fill="#6e9282"/>
-    <!-- Free on face ACD: 0.3A + 0.4C + 0.3D = (0.3*55+0.4*98+0.3*48, 0.3*22+0.4*78+0.3*58) = (70.1, 55.2) -->
-    <circle cx="70" cy="55" r="3.5" fill="#c4884a"/>
-    <!-- Free on face BCD: 0.3B + 0.4C + 0.3D = (0.3*12+0.4*98+0.3*48, 0.3*98+0.4*78+0.3*58) = (57.6, 78.0) -->
-    <circle cx="58" cy="78" r="3.5" fill="#3b8a8a"/>
-    <!-- Free on face ABC: 0.15A + 0.5B + 0.35C = (0.15*55+0.5*12+0.35*98, 0.15*22+0.5*98+0.35*78) = (48.6, 79.6) — too close to BCD. Use 0.25A+0.55B+0.2C = (0.25*55+0.55*12+0.2*98, 0.25*22+0.55*98+0.2*78) = (40, 75) -->
-    <circle cx="40" cy="75" r="3.5" fill="#a77b6c"/>
-    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">particle repulsion</text>
+    <!-- Same lifted tetrahedron -->
+    <line x1="56" y1="22" x2="15" y2="98" stroke="#6e7681" stroke-width="0.6" opacity="0.2"/>
+    <line x1="56" y1="22" x2="95" y2="78" stroke="#6e7681" stroke-width="0.6" opacity="0.2"/>
+    <line x1="15" y1="98" x2="95" y2="78" stroke="#6e7681" stroke-width="0.6" opacity="0.2"/>
+    <line x1="56" y1="22" x2="51" y2="58" stroke="#6e7681" stroke-width="0.4" opacity="0.1" stroke-dasharray="4,3"/>
+    <line x1="15" y1="98" x2="51" y2="58" stroke="#6e7681" stroke-width="0.4" opacity="0.1" stroke-dasharray="4,3"/>
+    <line x1="95" y1="78" x2="51" y2="58" stroke="#6e7681" stroke-width="0.4" opacity="0.1" stroke-dasharray="4,3"/>
+    <!-- Seeds stay fixed -->
+    <circle cx="56" cy="22" r="4.5" fill="#e63946"/>
+    <circle cx="15" cy="98" r="4.5" fill="#2a9d8f"/>
+    <circle cx="95" cy="78" r="4.5" fill="#457b9d"/>
+    <circle cx="51" cy="58" r="4.5" fill="#f0932b"/>
+    <!-- Free particles spread via Euclidean repulsion -->
+    <circle cx="31" cy="71" r="3.5" fill="#70927b"/>
+    <circle cx="70" cy="55" r="3.5" fill="#a77c68"/>
+    <circle cx="58" cy="78" r="3.5" fill="#3b698d"/>
+    <circle cx="40" cy="75" r="3.5" fill="#8e616e"/>
+    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">Euclidean repulsion</text>
   </g>
 
   <!-- Arrow 4 -->
-  <g transform="translate(650, 62)">
-    <line x1="0" y1="0" x2="30" y2="0" stroke="#484f58" stroke-width="1.5"/>
-    <polygon points="30,-4 38,0 30,4" fill="#484f58"/>
+  <g transform="translate(582, 62)">
+    <line x1="0" y1="0" x2="24" y2="0" stroke="#484f58" stroke-width="1.5"/>
+    <polygon points="24,-4 32,0 24,4" fill="#484f58"/>
   </g>
 
   <!-- ═══ Stage 5: Palette ═══ -->
-  <g transform="translate(692, 18)">
-    <text x="45" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">PALETTE</text>
-    <rect x="15" y="20" width="56" height="11" rx="3" fill="#e63946"/>
-    <rect x="15" y="34" width="56" height="11" rx="3" fill="#f0932b"/>
-    <rect x="15" y="48" width="56" height="11" rx="3" fill="#c4884a"/>
-    <rect x="15" y="62" width="56" height="11" rx="3" fill="#a77b6c"/>
-    <rect x="15" y="76" width="56" height="11" rx="3" fill="#6e9282"/>
-    <rect x="15" y="90" width="56" height="11" rx="3" fill="#3b8a8a"/>
-    <rect x="15" y="104" width="56" height="11" rx="3" fill="#2a9d8f"/>
-    <rect x="15" y="118" width="56" height="11" rx="3" fill="#457b9d"/>
+  <g transform="translate(618, 18)">
+    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">PALETTE</text>
+    <text x="55" y="22" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="7" text-anchor="middle" font-style="italic">inverse lift</text>
+    <rect x="25" y="28" width="56" height="11" rx="3" fill="#e63946"/>
+    <rect x="25" y="42" width="56" height="11" rx="3" fill="#f0932b"/>
+    <rect x="25" y="56" width="56" height="11" rx="3" fill="#a77c68"/>
+    <rect x="25" y="70" width="56" height="11" rx="3" fill="#8e616e"/>
+    <rect x="25" y="84" width="56" height="11" rx="3" fill="#70927b"/>
+    <rect x="25" y="98" width="56" height="11" rx="3" fill="#3b698d"/>
+    <rect x="25" y="112" width="56" height="11" rx="3" fill="#2a9d8f"/>
+    <rect x="25" y="126" width="56" height="11" rx="3" fill="#457b9d"/>
   </g>
 
   <!-- Bottom description -->
-  <text x="400" y="170" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle">Seeds define the color family. The hull constrains it. Warping avoids gray. Physics distributes the colors.</text>
+  <text x="400" y="170" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle">The lift defines the family. The convexity preserves the vividness. Plain physics distributes the colors.</text>
 </svg>
