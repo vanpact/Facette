@@ -110,10 +110,10 @@ export function createAnnealingSchedule(options?: AnnealingScheduleOptions): Ann
  * Each step:
  *   1. Query schedule for p, kappa, stepSize
  *   2. Compute forces+energy via forces.computeForcesAndEnergy
- *   3. For free particles: project force, normalize by max force, scale by stepSize, apply
- *   4. Compute oklabPositions and minDeltaE
- *   5. yield frame
- *   6. Check convergence
+ *   3. Compute projected forces and max displacement (for convergence)
+ *   4. Yield frame with current particles and matching energy
+ *   5. Check convergence
+ *   6. Apply displacement to get next state
  */
 export function* createOptimizationStepper(
   initialParticles: Particle[],
@@ -133,7 +133,7 @@ export function* createOptimizationStepper(
     // Compute forces and energy on current state
     const { forces: forceVecs, energy } = forces.computeForcesAndEnergy(particles, p, kappa);
 
-    // First pass: project forces and find max force magnitude for normalization
+    // Project forces and find max force magnitude for normalization
     const projected: (Vec3 | null)[] = [];
     let maxForceNorm = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -147,34 +147,22 @@ export function* createOptimizationStepper(
       }
     }
 
-    // Second pass: apply normalized displacements
-    let maxDisplacement = 0;
-    const newParticles: Particle[] = [];
+    // Compute max displacement that WOULD be applied (for convergence check)
     const normalizer = maxForceNorm > 1e-30 ? 1 / maxForceNorm : 0;
-
+    let maxDisplacement = 0;
     for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i];
       const proj = projected[i];
       if (proj !== null) {
-        // displacement = stepSize * (force / maxForceNorm)
-        const displacement = vec3Scale(proj, stepSize * normalizer);
-        const dispNorm = vec3Norm(displacement);
+        const dispNorm = vec3Norm(vec3Scale(proj, stepSize * normalizer));
         if (dispNorm > maxDisplacement) maxDisplacement = dispNorm;
-        newParticles.push(constraint.applyDisplacement(particle, displacement));
-      } else {
-        newParticles.push(particle);
       }
     }
 
-    particles = newParticles;
-
-    // Compute OKLab positions on the new state
+    // Compute OKLab positions on current state (consistent with energy)
     const oklabPositions = particles.map(pt => inverseLift(pt.position));
-
-    // Compute min pairwise deltaE on the new state
     const minDeltaE = pairwiseMinDeltaE(oklabPositions);
 
-    // Yield frame with deep copy of particles
+    // Yield frame — particles and energy are from the same state
     yield {
       iteration,
       particles: cloneParticles(particles),
@@ -191,5 +179,20 @@ export function* createOptimizationStepper(
     }
 
     prevEnergy = energy;
+
+    // Apply displacements to produce next state
+    const newParticles: Particle[] = [];
+    for (let i = 0; i < particles.length; i++) {
+      const particle = particles[i];
+      const proj = projected[i];
+      if (proj !== null) {
+        const displacement = vec3Scale(proj, stepSize * normalizer);
+        newParticles.push(constraint.applyDisplacement(particle, displacement));
+      } else {
+        newParticles.push(particle);
+      }
+    }
+
+    particles = newParticles;
   }
 }
