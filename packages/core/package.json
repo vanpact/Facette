@@ -13,7 +13,7 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "docs/assets/*.svg"],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
