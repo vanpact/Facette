@@ -5,6 +5,7 @@ import type {
   HullGeometry,
   LineGeometry,
   AtlasQuery,
+  Vec3,
 } from './types';
 import { interpolate, computeBarycentric, clampAndRenormalize } from './barycentric';
 
@@ -210,7 +211,11 @@ export function initializeParticlesHull(
     });
   }
 
-  // --- Gray jitter pass ---
+  // --- Gray jitter pass (spec Section 4.5) ---
+  // For particles at near-zero chroma: project lifted-space +a direction onto
+  // the face tangent plane. If negligible, use e_1. Alternate sign by index.
+  const plusA: Vec3 = [0, 1, 0]; // +a direction in (L, a, b) space
+
   for (let i = seeds.length; i < particles.length; i++) {
     const p = particles[i];
     if (p.kind !== 'free') continue;
@@ -218,15 +223,34 @@ export function initializeParticlesHull(
     const chroma = Math.sqrt(p.position.a * p.position.a + p.position.b * p.position.b);
     if (chroma >= 1e-6) continue;
 
-    // Perturb along tangent: u for even free-particle index, v for odd
     const freeIndex = i - seeds.length;
     const { u, v: vDir } = atlas.getFaceBasis(p.faceIndex);
-    const dir = freeIndex % 2 === 0 ? u : vDir;
+
+    // Project +a onto tangent plane: proj = dot(+a, u)*u + dot(+a, v)*v
+    const projU = plusA[0] * u[0] + plusA[1] * u[1] + plusA[2] * u[2];
+    const projV = plusA[0] * vDir[0] + plusA[1] * vDir[1] + plusA[2] * vDir[2];
+    let dir: Vec3 = [
+      projU * u[0] + projV * vDir[0],
+      projU * u[1] + projV * vDir[1],
+      projU * u[2] + projV * vDir[2],
+    ];
+
+    // If projection is negligible, fall back to e_1 (u)
+    const projMag = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+    if (projMag < 1e-8) {
+      dir = u;
+    } else {
+      // Normalize the projection direction
+      dir = [dir[0] / projMag, dir[1] / projMag, dir[2] / projMag];
+    }
+
+    // Alternate sign by particle index to avoid systematic hue bias
+    const sign = freeIndex % 2 === 0 ? 1 : -1;
 
     const perturbedPos: OKLab = {
-      L: p.position.L + dir[0] * 1e-5,
-      a: p.position.a + dir[1] * 1e-5,
-      b: p.position.b + dir[2] * 1e-5,
+      L: p.position.L + sign * dir[0] * 1e-5,
+      a: p.position.a + sign * dir[1] * 1e-5,
+      b: p.position.b + sign * dir[2] * 1e-5,
     };
 
     const [fv0, fv1, fv2] = atlas.getFaceVertices(p.faceIndex);
