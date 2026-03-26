@@ -10,10 +10,10 @@ Perceptual color palette generation. Give it a few seed colors and a target size
 
 ## How it works
 
-Facette treats palette generation as a physics simulation: colors are particles on the convex hull of your seeds in OKLab color space, repelling each other until they reach maximum separation. A coordinate warp contracts the low-chroma region so particles naturally avoid muddy grays — unless your seeds are muted, in which case the palette stays muted too.
+Facette treats palette generation as a physics simulation: colors are particles on the convex hull of your seeds in a radially lifted OKLab space, repelling each other until they reach maximum separation. The lift contracts the low-chroma region so particles naturally avoid muddy grays, and its convexity guarantees chroma preservation on intermediate colors between vivid seeds.
 
 <p align="center">
-  <img src="docs/assets/algorithm.svg" alt="Algorithm pipeline: Seeds → Hull → Warp → Optimize → Palette" width="800" />
+  <img src="docs/assets/algorithm.svg" alt="Algorithm pipeline: Seeds → Lift → Hull → Optimize → Inverse Lift → Palette" width="800" />
 </p>
 
 The algorithm handles everything automatically: 2 seeds produce a gradient, 3+ seeds define a surface, and the convex hull geometry adapts to any configuration — vivid, muted, narrow hue range, or full spectrum.
@@ -43,10 +43,12 @@ console.log(result.colors);
 ```ts
 const result = generatePalette(seeds, 8, {
   vividness: 0.06,  // 0 = auto (default), range [0.005, 0.10]
+  gamma: 1.5,       // chroma preservation strength, >= 1 (default: 1)
 });
 ```
 
-The `vividness` parameter controls how aggressively the algorithm avoids low-chroma colors. Higher values push the palette toward more saturated colors. At `0` (default), it adapts automatically based on how vivid your seeds are.
+- **`vividness`** — controls how aggressively the algorithm avoids low-chroma colors. Higher values push the palette toward more saturated colors. At `0` (default), it adapts automatically based on how vivid your seeds are.
+- **`gamma`** — controls chroma preservation on intermediate colors between vivid seeds. At `1` (default), the algorithm uses standard gray avoidance. Values above `1` (e.g. `1.5`–`2`) produce stronger outward bowing of the hull surface in OKLab, keeping midpoint colors more vivid. Useful for palettes with vivid seeds at wide hue separations.
 
 ### Debug / visualization API
 
@@ -84,9 +86,9 @@ Then open `http://localhost:5173`. The dashboard shows:
 
 - **Dual 3D views** — OKLab (Cartesian) and OKLCh (cylindrical) side by side
 - **Optimization playback** — watch particles repel each other frame by frame
-- **Warp morph** — toggle smoothly between unwarped and warped OKLab to see how the gray avoidance transform reshapes the space
+- **Lift morph** — toggle smoothly between OKLab and lifted space to see how the radial lift reshapes the space
 - **sRGB gamut boundary** — see the shape of displayable colors
-- **Point inspector** — click any point to see its OKLab, OKLCh, warped coordinates, and sRGB values
+- **Point inspector** — click any point to see its OKLab, OKLCh, lifted coordinates, and sRGB values
 - **Interactive seeds** — add, remove, or change seed colors and regenerate live
 
 ## API Reference
@@ -98,6 +100,7 @@ Then open `http://localhost:5173`. The dashboard shows:
 | `seeds` | `string[]` | Hex colors (e.g. `['#ff0000', '#0000ff']`). Minimum 2, must be distinct. |
 | `size` | `number` | Total palette size including seeds. Must be >= seed count. |
 | `options.vividness` | `number` | Gray avoidance strength. `0` = auto. Range `[0.005, 0.10]`. |
+| `options.gamma` | `number` | Chroma preservation strength. Default `1`. Must be `>= 1`. |
 
 **Returns** `PaletteResult`:
 
@@ -129,14 +132,14 @@ Same parameters as `generatePalette`. Returns a `PaletteStepper`:
 ## How the algorithm works (brief)
 
 1. **Parse seeds** — convert hex to OKLab
-2. **Detect dimensionality** — SVD determines if seeds are collinear (1D), coplanar (2D), or full 3D
-3. **Build geometry** — convex hull (2D/3D) or line segment (1D) from seeds
-4. **Warp space** — apply a coordinate transform that contracts the low-chroma region, making gray positions energetically expensive
-5. **Initialize particles** — greedy placement weighted by warped surface area
-6. **Optimize** — particle repulsion with Riesz energy (exponent ramps from 2 to 6), constrained to the hull surface
-7. **Output** — gamut-clip any out-of-range colors, convert to sRGB hex
+2. **Radial lift** — apply the convex transform `rho(r) = R * (f(r)/f(R))^gamma` that contracts the low-chroma region, preserves hue, and anchors max-chroma seeds as fixed points
+3. **Detect dimensionality** — SVD on lifted seeds determines if they are collinear (1D), coplanar (2D), or full 3D
+4. **Build geometry** — convex hull (2D/3D) or line segment (1D) from lifted seeds. Faces are flat in lifted space, so areas are exact.
+5. **Initialize particles** — greedy placement weighted by exact face area in lifted space
+6. **Optimize** — plain Euclidean Riesz repulsion (exponent ramps from 2 to 6), constrained to the hull surface in lifted space. Gamut penalty via finite differences through the inverse lift.
+7. **Output** — inverse-lift back to OKLab, gamut-clip, convert to sRGB hex
 
-The full algorithm specification is in [`Specs/Facette_algorithm_v4.4.md`](Specs/Facette_algorithm_v4.4.md).
+The full algorithm specification is in [`Specs/Facette_algorithm_v5.md`](Specs/Facette_algorithm_v5.md).
 
 ## License
 
