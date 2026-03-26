@@ -28,13 +28,13 @@ export function OKLabViewer({ controlsRef }: OKLabViewerProps) {
   return (
     <div className="relative w-full h-full">
       <div className="absolute top-2 left-2 z-10 text-xs font-mono text-gray-400">
-        {isWarped ? 'Warped OKLab' : 'OKLab'}
+        {isWarped ? 'Lifted' : 'OKLab'}
       </div>
       <button
         onClick={toggle}
         className="absolute top-2 right-2 z-10 px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded border border-gray-600"
       >
-        {isWarped ? 'Unwarp' : 'Warp'}
+        {isWarped ? 'Unlift' : 'Lift'}
       </button>
       <SceneSetup controlsRef={controlsRef}>
         {showAxes && <AxisHelper labels={['a', 'L', 'b']} />}

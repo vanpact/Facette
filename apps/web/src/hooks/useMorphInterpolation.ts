@@ -22,7 +22,7 @@ export function useMorphInterpolation(): {
     if (!trace || currentFrame >= trace.frames.length) return null;
     const frame = trace.frames[currentFrame];
     const interpolated = frame.particles.map((p, i) =>
-      lerpOKLab(p.position, frame.warpedPositions[i], morphT)
+      lerpOKLab(frame.oklabPositions[i], p.position, morphT)
     );
     return { particles: frame.particles, interpolatedPositions: interpolated };
   }, [trace, currentFrame, morphT]);
