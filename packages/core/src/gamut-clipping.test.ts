@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { createGamutChecker } from './gamut-clipping';
-import { oklabToLinearRgb } from './color-conversion';
 
 describe('GamutChecker', () => {
   const checker = createGamutChecker();
@@ -58,44 +57,4 @@ describe('GamutChecker', () => {
     });
   });
 
-  describe('penaltyGradient', () => {
-    it('returns zero gradient for in-gamut colors', () => {
-      const grad = checker.penaltyGradient({ L: 0.5, a: 0, b: 0 });
-      expect(grad[0]).toBeCloseTo(0);
-      expect(grad[1]).toBeCloseTo(0);
-      expect(grad[2]).toBeCloseTo(0);
-    });
-
-    it('returns non-zero gradient for out-of-gamut colors', () => {
-      const grad = checker.penaltyGradient({ L: 0.5, a: 0.4, b: 0.4 });
-      const magnitude = Math.sqrt(grad[0] ** 2 + grad[1] ** 2 + grad[2] ** 2);
-      expect(magnitude).toBeGreaterThan(0);
-    });
-
-    it('matches finite-difference approximation', () => {
-      const pos = { L: 0.5, a: 0.3, b: 0.2 };
-      const grad = checker.penaltyGradient(pos);
-      const eps = 1e-6;
-
-      // Scalar penalty function
-      const penalty = (p: { L: number; a: number; b: number }): number => {
-        const rgb = oklabToLinearRgb(p);
-        let pen = 0;
-        for (const ch of [rgb.r, rgb.g, rgb.b]) {
-          if (ch < 0) pen += ch * ch;
-          if (ch > 1) pen += (ch - 1) * (ch - 1);
-        }
-        return pen;
-      };
-
-      const p0 = penalty(pos);
-      const fdL = (penalty({ L: pos.L + eps, a: pos.a, b: pos.b }) - p0) / eps;
-      const fda = (penalty({ L: pos.L, a: pos.a + eps, b: pos.b }) - p0) / eps;
-      const fdb = (penalty({ L: pos.L, a: pos.a, b: pos.b + eps }) - p0) / eps;
-
-      expect(grad[0]).toBeCloseTo(fdL, 3);
-      expect(grad[1]).toBeCloseTo(fda, 3);
-      expect(grad[2]).toBeCloseTo(fdb, 3);
-    });
-  });
 });

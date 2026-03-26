@@ -1,11 +1,9 @@
-import type { OKLab, Vec3, GamutChecker } from './types';
+import type { OKLab, GamutChecker } from './types';
 import {
   oklabToLinearRgb,
-  oklabToLinearRgbJacobian,
   oklabToOklch,
   oklchToOklab,
 } from './color-conversion';
-import { mat3MulVec3, mat3Transpose } from './math';
 
 const GAMUT_TOLERANCE = 1e-10;
 const BINARY_SEARCH_ITERATIONS = 20;
@@ -61,29 +59,5 @@ export function createGamutChecker(): GamutChecker {
       return oklchToOklab({ L, C: lo, h });
     },
 
-    /**
-     * Compute the gradient of the quadratic out-of-gamut penalty with respect
-     * to OKLab coordinates, using the chain rule through the Jacobian.
-     *
-     * Penalty: P = sum_c { c^2 if c < 0, (c-1)^2 if c > 1, 0 otherwise }
-     * gradOKLab = J^T · gradLinRGB   where J = d(linRGB)/d(OKLab)
-     */
-    penaltyGradient(pos: OKLab): Vec3 {
-      const rgb = oklabToLinearRgb(pos);
-
-      // dP/dc for each linear RGB channel
-      const dPdr = rgb.r < 0 ? 2 * rgb.r : rgb.r > 1 ? 2 * (rgb.r - 1) : 0;
-      const dPdg = rgb.g < 0 ? 2 * rgb.g : rgb.g > 1 ? 2 * (rgb.g - 1) : 0;
-      const dPdb = rgb.b < 0 ? 2 * rgb.b : rgb.b > 1 ? 2 * (rgb.b - 1) : 0;
-
-      const gradLinRGB: Vec3 = [dPdr, dPdg, dPdb];
-
-      // J = d(linRGB)/d(OKLab), shape 3×3
-      const J = oklabToLinearRgbJacobian(pos);
-
-      // gradOKLab = J^T · gradLinRGB
-      const JT = mat3Transpose(J);
-      return mat3MulVec3(JT, gradLinRGB);
-    },
   };
 }
