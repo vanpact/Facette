@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Perceptual color palette generation via particle repulsion on convex hulls in OKLab space",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,6 +19,25 @@
     "build": "tsup",
     "test": "vitest run",
     "dev": "tsup --watch"
+  },
+  "keywords": [
+    "color",
+    "palette",
+    "color-palette",
+    "oklab",
+    "perceptual",
+    "color-generation",
+    "design"
+  ],
+  "author": "yrvaneycke",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vanpact/Facette.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/vanpact/Facette#readme",
+  "bugs": {
+    "url": "https://github.com/vanpact/Facette/issues"
   },
   "devDependencies": {
     "tsup": "^8",
