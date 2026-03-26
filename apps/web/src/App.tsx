@@ -1,7 +1,15 @@
+import { useEffect } from 'react';
+import { DashboardLayout } from './components/layout/DashboardLayout';
+import { usePaletteEngine } from './hooks/usePaletteEngine';
+import { usePlayback } from './hooks/usePlayback';
+
 export default function App() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <h1 className="text-2xl font-bold">Facette Debug Dashboard</h1>
-    </div>
-  );
+  const { regenerate } = usePaletteEngine();
+  usePlayback();
+
+  useEffect(() => {
+    regenerate();
+  }, [regenerate]);
+
+  return <DashboardLayout />;
 }
