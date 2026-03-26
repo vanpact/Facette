@@ -66,6 +66,21 @@ describe('input validation', () => {
   it('accepts vividness=0 as auto', () => {
     expect(() => generatePalette(['#ff0000', '#00ff00'], 4, { vividness: 0 })).not.toThrow();
   });
+
+  it('rejects gamma below 1', () => {
+    expect(() => generatePalette(['#ff0000', '#00ff00'], 4, { gamma: 0.5 })).toThrow('Gamma');
+  });
+
+  it('accepts gamma >= 1', () => {
+    const result = generatePalette(['#ff0000', '#00ff00'], 4, { gamma: 1.5 });
+    expect(result.colors).toHaveLength(4);
+  });
+
+  it('gamma=1 produces valid output (V4.4 equivalence)', () => {
+    const result = generatePalette(['#e63946', '#457b9d', '#1d3557'], 6, { gamma: 1 });
+    expect(result.colors).toHaveLength(6);
+    expect(result.metadata.minDeltaE).toBeGreaterThan(0);
+  });
 });
 
 describe('createPaletteStepper', () => {
@@ -81,7 +96,7 @@ describe('createPaletteStepper', () => {
     expect(first.done).toBe(false);
     expect(first.value.iteration).toBe(0);
     expect(first.value.particles).toBeDefined();
-    expect(first.value.warpedPositions).toBeDefined();
+    expect(first.value.oklabPositions).toBeDefined();
   });
 
   it('run() returns complete trace', () => {

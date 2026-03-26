@@ -6,6 +6,8 @@ export function PaletteControls() {
   const vividness = useStore((s) => s.vividness);
   const setPaletteSize = useStore((s) => s.setPaletteSize);
   const setVividness = useStore((s) => s.setVividness);
+  const gamma = useStore((s) => s.gamma);
+  const setGamma = useStore((s) => s.setGamma);
   const isComputing = useStore((s) => s.isComputing);
   const seeds = useStore((s) => s.seeds);
   const { regenerate } = usePaletteEngine();
@@ -32,6 +34,18 @@ export function PaletteControls() {
           max={100}
           value={vividness * 1000}
           onChange={(e) => setVividness(Number(e.target.value) / 1000)}
+          onMouseUp={regenerate}
+          className="w-24"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-gray-400 w-12">{gamma === 1 ? 'γ: 1' : `γ: ${gamma.toFixed(1)}`}</label>
+        <input
+          type="range"
+          min={10}
+          max={30}
+          value={gamma * 10}
+          onChange={(e) => setGamma(Number(e.target.value) / 10)}
           onMouseUp={regenerate}
           className="w-24"
         />

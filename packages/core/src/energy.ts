@@ -1,15 +1,14 @@
-import type { ForceComputer, GamutChecker, OKLab, Particle, Vec3, WarpTransform } from './types';
+import type { ForceComputer, GamutChecker, OKLab, Particle, RadialLift, Vec3 } from './types';
 import { oklabToLinearRgb } from './color-conversion';
 import { vec3Add, vec3Scale, vec3Sub, vec3Norm } from './math';
 
-/** Convert an OKLab value to a Vec3 tuple [L, a, b]. */
 function oklabToVec3(pos: OKLab): Vec3 {
   return [pos.L, pos.a, pos.b];
 }
 
 /**
- * Compute the scalar gamut penalty energy for a single particle position.
- * P = Σ_c { c² if c < 0,  (c−1)² if c > 1,  0 otherwise }
+ * Compute the scalar gamut penalty energy for a single OKLab position.
+ * P = sum_c { c^2 if c < 0,  (c-1)^2 if c > 1,  0 otherwise }
  */
 function gamutPenaltyEnergy(pos: OKLab): number {
   const rgb = oklabToLinearRgb(pos);
@@ -21,12 +20,15 @@ function gamutPenaltyEnergy(pos: OKLab): number {
   return e;
 }
 
+const FD_EPS = 1e-7;
+
 /**
- * Creates a ForceComputer that computes Riesz repulsion energy/forces
- * in warped space, with an optional quadratic out-of-gamut penalty.
+ * Creates a ForceComputer that computes plain Euclidean Riesz repulsion
+ * in lifted space, with gamut penalty gradient via finite differences
+ * through the inverse lift.
  */
 export function createForceComputer(
-  warp: WarpTransform,
+  lift: RadialLift,
   gamut: GamutChecker,
 ): ForceComputer {
   return {
@@ -36,60 +38,46 @@ export function createForceComputer(
       kappa: number,
     ): { forces: Vec3[]; energy: number } {
       const n = particles.length;
+      const vecs: Vec3[] = particles.map(pt => oklabToVec3(pt.position));
 
-      // Step 1: map all positions to warped coordinates as Vec3
-      const warpedVecs: Vec3[] = particles.map(pt =>
-        oklabToVec3(warp.toWarped(pt.position)),
-      );
-
-      // Step 2 & 3: pairwise warped distances + repulsion energy
-      // Also accumulate per-particle repulsion gradients in warped space.
-      const gradWarpedRep: Vec3[] = Array.from({ length: n }, () => [0, 0, 0] as Vec3);
+      const gradRep: Vec3[] = Array.from({ length: n }, () => [0, 0, 0] as Vec3);
       let eRep = 0;
 
       for (let i = 0; i < n; i++) {
         for (let j = i + 1; j < n; j++) {
-          // diff = wi - wj
-          const diff: Vec3 = vec3Sub(warpedVecs[i], warpedVecs[j]);
+          const diff: Vec3 = vec3Sub(vecs[i], vecs[j]);
           const rawDist = vec3Norm(diff);
           const dij = Math.max(rawDist, 1e-10);
-
-          // Repulsion energy: 1/d^p
           eRep += Math.pow(dij, -p);
-
-          // Actual energy gradient: ∂E/∂wi = -p · d^{-(p+2)} · (wi - wj)
-          // grad_i += -coeff * (wi - wj)  = -coeff * diff
-          // grad_j += -coeff * (wj - wi)  = +coeff * diff
           const coeff = p * Math.pow(dij, -(p + 2));
-          gradWarpedRep[i] = vec3Add(gradWarpedRep[i], vec3Scale(diff, -coeff));
-          gradWarpedRep[j] = vec3Add(gradWarpedRep[j], vec3Scale(diff, coeff));
+          gradRep[i] = vec3Add(gradRep[i], vec3Scale(diff, -coeff));
+          gradRep[j] = vec3Add(gradRep[j], vec3Scale(diff, coeff));
         }
       }
 
-      // Steps 5–8: pull back repulsion gradient and add gamut gradient → total force
       const forces: Vec3[] = [];
       let eGamut = 0;
 
       for (let i = 0; i < n; i++) {
         const pos = particles[i].position;
+        const oklabPos = lift.fromLifted(pos);
+        const penalty = gamutPenaltyEnergy(oklabPos);
+        eGamut += penalty;
 
-        // Step 5: pull back repulsion gradient to OKLab
-        const gradOklabRep = warp.pullBackGradient(pos, gradWarpedRep[i]);
+        let gamutGrad: Vec3 = [0, 0, 0];
 
-        // Step 6: gamut penalty gradient
-        const gradGamut = gamut.penaltyGradient(pos);
+        if (penalty > 0) {
+          const gL = (gamutPenaltyEnergy(lift.fromLifted({ L: pos.L + FD_EPS, a: pos.a, b: pos.b })) - penalty) / FD_EPS;
+          const ga = (gamutPenaltyEnergy(lift.fromLifted({ L: pos.L, a: pos.a + FD_EPS, b: pos.b })) - penalty) / FD_EPS;
+          const gb = (gamutPenaltyEnergy(lift.fromLifted({ L: pos.L, a: pos.a, b: pos.b + FD_EPS })) - penalty) / FD_EPS;
+          gamutGrad = [gL, ga, gb];
+        }
 
-        // Step 7: gamut penalty energy
-        eGamut += gamutPenaltyEnergy(pos);
-
-        // Step 8: total force = -(grad_rep + kappa * grad_gamut)
-        const totalGrad = vec3Add(gradOklabRep, vec3Scale(gradGamut, kappa));
+        const totalGrad = vec3Add(gradRep[i], vec3Scale(gamutGrad, kappa));
         forces.push(vec3Scale(totalGrad, -1));
       }
 
-      // Step 9: total energy
       const energy = eRep + kappa * eGamut;
-
       return { forces, energy };
     },
   };

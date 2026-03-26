@@ -40,16 +40,16 @@ export type Particle =
 
 // === Narrow Interfaces (ISP + DIP) ===
 
-export interface WarpTransform {
-  toWarped(pos: OKLab): OKLab;
-  fromWarped(pos: OKLab): OKLab;
-  pullBackGradient(pos: OKLab, gradWarped: Vec3): Vec3;
-  /** The r_s value used by this transform, exposed for trace metadata. */
+export interface RadialLift {
+  toLifted(pos: OKLab): OKLab;
+  fromLifted(pos: OKLab): OKLab;
   readonly rs: number;
+  readonly R: number;
+  readonly gamma: number;
 }
 
 /**
- * ForceComputer is constructed with WarpTransform and GamutChecker
+ * ForceComputer is constructed with RadialLift and GamutChecker
  * injected (DIP). Only per-iteration parameters (p, kappa) are
  * passed at call time since they change via annealing.
  * Returns forces AND scalar energy in one pass (shared pairwise distances).
@@ -81,15 +81,9 @@ export interface MotionConstraint {
   applyDisplacement(particle: Particle, displacement: Vec3): Particle;
 }
 
-/**
- * GamutChecker.penaltyGradient returns ∇E_gamut in OKLab coordinates,
- * i.e. the linear-RGB channel penalties already chain-ruled through
- * the OKLab→linear-RGB Jacobian (Section 5.2 of algorithm spec).
- */
 export interface GamutChecker {
   isInGamut(pos: OKLab): boolean;
   clipPreserveChroma(pos: OKLab): OKLab;
-  penaltyGradient(pos: OKLab): Vec3;
 }
 
 export interface AnnealingSchedule {
@@ -109,7 +103,7 @@ export interface AnnealingSchedule {
 export interface OptimizationFrame {
   iteration: number;
   particles: Particle[];
-  warpedPositions: OKLab[];
+  oklabPositions: OKLab[];
   energy: number;
   minDeltaE: number;
   p: number;
@@ -123,12 +117,15 @@ export interface OptimizationTrace {
   finalColors: string[];
   clippedIndices: number[];
   rs: number;
+  gamma: number;
+  R: number;
 }
 
 // === Public API Types ===
 
 export interface PaletteOptions {
   vividness?: number;
+  gamma?: number;
 }
 
 export interface PaletteResult {

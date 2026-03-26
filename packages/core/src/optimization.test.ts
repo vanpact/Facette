@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { createOptimizationStepper, createAnnealingSchedule, pairwiseMinDeltaE } from './optimization';
 import { createForceComputer } from './energy';
-import { createWarpTransform } from './warp';
+import { createRadialLift } from './radial-lift';
 import { createGamutChecker } from './gamut-clipping';
 import { createLineConstraint } from './line-segment';
 import type { Particle, OKLab } from './types';
 
 describe('pairwiseMinDeltaE', () => {
-  it('computes minimum distance between particles', () => {
-    const particles: Particle[] = [
-      { kind: 'free-1d', position: { L: 0.2, a: 0, b: 0 }, t: 0 },
-      { kind: 'free-1d', position: { L: 0.5, a: 0, b: 0 }, t: 0.5 },
-      { kind: 'free-1d', position: { L: 0.9, a: 0, b: 0 }, t: 1 },
+  it('computes minimum distance between positions', () => {
+    const positions: OKLab[] = [
+      { L: 0.2, a: 0, b: 0 },
+      { L: 0.5, a: 0, b: 0 },
+      { L: 0.9, a: 0, b: 0 },
     ];
-    const minDE = pairwiseMinDeltaE(particles);
+    const minDE = pairwiseMinDeltaE(positions);
     expect(minDE).toBeCloseTo(0.3, 4); // 0.2-0.5 = 0.3
   });
 });
@@ -42,9 +42,9 @@ describe('createAnnealingSchedule', () => {
 
 describe('createOptimizationStepper', () => {
   it('yields frames with correct structure', () => {
-    const warp = createWarpTransform(0.04);
+    const lift = createRadialLift(0.04, 0.15, 1);
     const gamut = createGamutChecker();
-    const forces = createForceComputer(warp, gamut);
+    const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
     const constraint = createLineConstraint(line.start, line.end);
     const schedule = createAnnealingSchedule({ maxIterations: 50 });
@@ -55,20 +55,20 @@ describe('createOptimizationStepper', () => {
       { kind: 'pinned-endpoint', position: line.end, t: 1 },
     ];
 
-    const gen = createOptimizationStepper(particles, forces, constraint, warp, schedule);
+    const gen = createOptimizationStepper(particles, forces, constraint, lift.fromLifted, schedule);
     const first = gen.next();
     expect(first.done).toBe(false);
     expect(first.value.iteration).toBe(0);
     expect(first.value.particles.length).toBe(3);
-    expect(first.value.warpedPositions.length).toBe(3);
+    expect(first.value.oklabPositions.length).toBe(3);
     expect(first.value.energy).toBeGreaterThan(0);
     expect(first.value.minDeltaE).toBeGreaterThan(0);
   });
 
   it('pinned particles do not move', () => {
-    const warp = createWarpTransform(0.04);
+    const lift = createRadialLift(0.04, 0.15, 1);
     const gamut = createGamutChecker();
-    const forces = createForceComputer(warp, gamut);
+    const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
     const constraint = createLineConstraint(line.start, line.end);
     const schedule = createAnnealingSchedule({ maxIterations: 10 });
@@ -79,7 +79,7 @@ describe('createOptimizationStepper', () => {
       { kind: 'pinned-endpoint', position: { ...line.end }, t: 1 },
     ];
 
-    const gen = createOptimizationStepper(particles, forces, constraint, warp, schedule);
+    const gen = createOptimizationStepper(particles, forces, constraint, lift.fromLifted, schedule);
     let lastFrame;
     for (const frame of gen) {
       lastFrame = frame;
@@ -90,9 +90,9 @@ describe('createOptimizationStepper', () => {
   });
 
   it('final energy is lower than initial energy', () => {
-    const warp = createWarpTransform(0.04);
+    const lift = createRadialLift(0.04, 0.15, 1);
     const gamut = createGamutChecker();
-    const forces = createForceComputer(warp, gamut);
+    const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
     const constraint = createLineConstraint(line.start, line.end);
     const schedule = createAnnealingSchedule({ maxIterations: 200 });
@@ -104,7 +104,7 @@ describe('createOptimizationStepper', () => {
       { kind: 'pinned-endpoint', position: line.end, t: 1 },
     ];
 
-    const gen = createOptimizationStepper(particles, forces, constraint, warp, schedule);
+    const gen = createOptimizationStepper(particles, forces, constraint, lift.fromLifted, schedule);
     let firstEnergy: number | null = null;
     let lastEnergy = 0;
     for (const frame of gen) {

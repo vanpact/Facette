@@ -5,7 +5,6 @@ import type {
   HullGeometry,
   LineGeometry,
   AtlasQuery,
-  WarpTransform,
 } from './types';
 import { interpolate, computeBarycentric, clampAndRenormalize } from './barycentric';
 
@@ -18,52 +17,6 @@ function oklabDistSq(a: OKLab, b: OKLab): number {
   const da = a.a - b.a;
   const db = a.b - b.b;
   return dL * dL + da * da + db * db;
-}
-
-/**
- * Compute the area of a triangle in OKLab space given three vertices.
- */
-function triangleArea(p0: OKLab, p1: OKLab, p2: OKLab): number {
-  // cross product of (p1-p0) and (p2-p0), then |cross|/2
-  const e1L = p1.L - p0.L; const e1a = p1.a - p0.a; const e1b = p1.b - p0.b;
-  const e2L = p2.L - p0.L; const e2a = p2.a - p0.a; const e2b = p2.b - p0.b;
-  const cx = e1a * e2b - e1b * e2a;
-  const cy = e1b * e2L - e1L * e2b;
-  const cz = e1L * e2a - e1a * e2L;
-  return 0.5 * Math.sqrt(cx * cx + cy * cy + cz * cz);
-}
-
-/**
- * Compute the subdivided warped area of a face by splitting it into 4
- * sub-triangles using the 3 edge midpoints, then transforming all 6 points
- * through warp.toWarped and summing the sub-triangle areas.
- */
-function subdividedWarpedArea(
-  v0: OKLab,
-  v1: OKLab,
-  v2: OKLab,
-  warp: WarpTransform,
-): number {
-  // Compute edge midpoints in OKLab space
-  const m01: OKLab = { L: (v0.L + v1.L) / 2, a: (v0.a + v1.a) / 2, b: (v0.b + v1.b) / 2 };
-  const m12: OKLab = { L: (v1.L + v2.L) / 2, a: (v1.a + v2.a) / 2, b: (v1.b + v2.b) / 2 };
-  const m02: OKLab = { L: (v0.L + v2.L) / 2, a: (v0.a + v2.a) / 2, b: (v0.b + v2.b) / 2 };
-
-  // Warp all 6 points
-  const w0   = warp.toWarped(v0);
-  const w1   = warp.toWarped(v1);
-  const w2   = warp.toWarped(v2);
-  const wm01 = warp.toWarped(m01);
-  const wm12 = warp.toWarped(m12);
-  const wm02 = warp.toWarped(m02);
-
-  // Sum areas of 4 sub-triangles in warped space
-  return (
-    triangleArea(w0,   wm01, wm02) +
-    triangleArea(wm01, w1,   wm12) +
-    triangleArea(wm02, wm12, w2  ) +
-    triangleArea(wm01, wm12, wm02)
-  );
 }
 
 /**
@@ -160,15 +113,15 @@ export function initializeParticles1D(
 // ---------------------------------------------------------------------------
 
 /**
- * Greedy particle placement with warped area scoring.
+ * Greedy particle placement with atlas area scoring.
  *
  * Algorithm:
  * 1. Start with pinned seeds.
  * 2. For each remaining free particle to place:
- *    a. Score each non-degenerate face: score = subdividedWarpedArea / (1 + particlesOnFace)
+ *    a. Score each non-degenerate face: score = atlas.getFaceArea(fi) / (1 + particlesOnFace)
  *    b. Select the face with highest score.
  *    c. Sample a 5x5 grid of barycentric coords on that face; pick the point
- *       maximizing minimum warped distance to all existing particles.
+ *       maximizing minimum OKLab distance to all existing particles.
  *    d. Create a `free` particle at that position.
  * 3. Gray jitter: for any free particle with chroma < 1e-6, perturb along the
  *    face tangent direction by 1e-5 and recompute barycentric coords.
@@ -177,7 +130,6 @@ export function initializeParticlesHull(
   seeds: Particle[],
   hull: HullGeometry,
   atlas: AtlasQuery,
-  warp: WarpTransform,
   n: number,
 ): Particle[] {
   const particles: Particle[] = [...seeds];
@@ -191,10 +143,9 @@ export function initializeParticlesHull(
     for (let fi = 0; fi < faceCount; fi++) {
       if (atlas.isDegenerate(fi)) continue;
 
-      const [v0, v1, v2] = atlas.getFaceVertices(fi);
-      const warpedArea = subdividedWarpedArea(v0, v1, v2, warp);
+      const area = atlas.getFaceArea(fi);
       const count = countParticlesOnFace(particles, fi, hull);
-      const score = warpedArea / (1 + count);
+      const score = area / (1 + count);
 
       if (score > bestScore) {
         bestScore = score;
@@ -214,19 +165,15 @@ export function initializeParticlesHull(
     let bestBary: Barycentric = { w0: 1 / 3, w1: 1 / 3, w2: 1 / 3 };
     let bestMinDist = -Infinity;
 
-    // Pre-compute warped positions of existing particles
-    const warpedParticlePositions = particles.map(p => warp.toWarped(p.position));
-
     for (const bary of gridSamples) {
       const pos = interpolate(bary, v0, v1, v2);
-      const warpedPos = warp.toWarped(pos);
 
       let minDist = Infinity;
-      if (warpedParticlePositions.length === 0) {
+      if (particles.length === 0) {
         minDist = Infinity;
       } else {
-        for (const wp of warpedParticlePositions) {
-          const d = Math.sqrt(oklabDistSq(warpedPos, wp));
+        for (const existing of particles) {
+          const d = Math.sqrt(oklabDistSq(pos, existing.position));
           if (d < minDist) minDist = d;
         }
       }

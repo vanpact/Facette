@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { initializeParticles1D, initializeParticlesHull } from './initialization';
-import { createWarpTransform } from './warp';
 import { buildAtlas } from './atlas';
 import type { Particle, OKLab, HullGeometry, LineGeometry, EdgeKey } from './types';
 
@@ -77,7 +76,6 @@ describe('initialization', () => {
       adjacency,
     };
     const atlas = buildAtlas(hull);
-    const warp = createWarpTransform(0.04);
 
     it('places correct number of particles', () => {
       const seeds: Particle[] = [
@@ -86,7 +84,7 @@ describe('initialization', () => {
         { kind: 'pinned-vertex', position: { L: 0, a: 1, b: 0 }, vertexIndex: 2 },
         { kind: 'pinned-vertex', position: { L: 0, a: 0, b: 1 }, vertexIndex: 3 },
       ];
-      const particles = initializeParticlesHull(seeds, hull, atlas, warp, 8);
+      const particles = initializeParticlesHull(seeds, hull, atlas, 8);
       expect(particles.length).toBe(8);
     });
 
@@ -97,7 +95,7 @@ describe('initialization', () => {
         { kind: 'pinned-vertex', position: { L: 0, a: 1, b: 0 }, vertexIndex: 2 },
         { kind: 'pinned-vertex', position: { L: 0, a: 0, b: 1 }, vertexIndex: 3 },
       ];
-      const particles = initializeParticlesHull(seeds, hull, atlas, warp, 8);
+      const particles = initializeParticlesHull(seeds, hull, atlas, 8);
       const pinned = particles.filter(p => p.kind === 'pinned-vertex');
       expect(pinned.length).toBe(4);
     });
@@ -109,7 +107,7 @@ describe('initialization', () => {
         { kind: 'pinned-vertex', position: { L: 0, a: 1, b: 0 }, vertexIndex: 2 },
         { kind: 'pinned-vertex', position: { L: 0, a: 0, b: 1 }, vertexIndex: 3 },
       ];
-      const particles = initializeParticlesHull(seeds, hull, atlas, warp, 8);
+      const particles = initializeParticlesHull(seeds, hull, atlas, 8);
       const free = particles.filter(p => p.kind === 'free');
       for (const p of free) {
         if (p.kind === 'free') {
@@ -129,7 +127,7 @@ describe('initialization', () => {
         { kind: 'pinned-vertex', position: { L: 0, a: 1, b: 0 }, vertexIndex: 2 },
         { kind: 'pinned-vertex', position: { L: 0, a: 0, b: 1 }, vertexIndex: 3 },
       ];
-      const particles = initializeParticlesHull(seeds, hull, atlas, warp, 6);
+      const particles = initializeParticlesHull(seeds, hull, atlas, 6);
       // All 4 faces are non-degenerate in this tetrahedron, so just verify count
       expect(particles.length).toBe(6);
     });

@@ -17,11 +17,10 @@ export function PointInfoPanel() {
 
   const frame = trace.frames[currentFrame];
   const particle = frame.particles[selectedIndex];
-  const warped = frame.warpedPositions[selectedIndex];
+  const oklab = frame.oklabPositions[selectedIndex];
   const pos = particle.position;
-  const lch = oklabToOklch(pos);
-  const hex = oklabToHex(pos);
-  const warpedLch = oklabToOklch(warped);
+  const lch = oklabToOklch(oklab);
+  const hex = oklabToHex(oklab);
 
   return (
     <div className="w-64 text-xs font-mono space-y-1 p-2">
@@ -31,9 +30,9 @@ export function PointInfoPanel() {
         <span className="text-gray-500">{particle.kind}</span>
       </div>
       <div className="text-gray-400">
-        <div>OKLab: {formatOKLab(pos)}</div>
+        <div>OKLab: {formatOKLab(oklab)}</div>
         <div>OKLCh: {formatOKLCh(lch)}</div>
-        <div>Warped: {formatOKLab(warped)}</div>
+        <div>Lifted: {formatOKLab(pos)}</div>
         <div>RGB: {formatRGB(hex)}</div>
       </div>
     </div>

@@ -8,10 +8,8 @@ import {
   oklabToHex,
   oklabToOklch,
   oklchToOklab,
-  oklabToLinearRgbJacobian,
 } from './color-conversion';
 import type { OKLab, OKLCh, LinRGB } from './types';
-import type { Mat3 } from './math';
 
 // ── 1. sRGB gamma round-trip ─────────────────────────────────────────────────
 describe('srgbToLinear / linearToSrgb round-trip', () => {
@@ -131,39 +129,3 @@ describe('oklabToOklch – zero chroma (gray)', () => {
   });
 });
 
-// ── 9. Jacobian matches finite differences ───────────────────────────────────
-describe('oklabToLinearRgbJacobian', () => {
-  const testPoints: OKLab[] = [
-    { L: 0.5, a: 0.05, b: 0.02 },
-    { L: 0.7, a: -0.05, b: 0.08 },
-    { L: 0.3, a: 0.1, b: -0.05 },
-  ];
-
-  for (const pos of testPoints) {
-    it(`Jacobian matches finite-difference at OKLab(${pos.L}, ${pos.a}, ${pos.b})`, () => {
-      const eps = 1e-6;
-      const J = oklabToLinearRgbJacobian(pos);
-
-      // Finite-difference approximation: J_ij = d(linRGB_i) / d(OKLab_j)
-      // Columns: perturb L, a, b respectively
-      const perturbations: OKLab[] = [
-        { L: pos.L + eps, a: pos.a, b: pos.b },
-        { L: pos.L, a: pos.a + eps, b: pos.b },
-        { L: pos.L, a: pos.a, b: pos.b + eps },
-      ];
-      const base = oklabToLinearRgb(pos);
-      const baseVec = [base.r, base.g, base.b];
-
-      for (let col = 0; col < 3; col++) {
-        const perturbed = oklabToLinearRgb(perturbations[col]);
-        const perturbedVec = [perturbed.r, perturbed.g, perturbed.b];
-
-        for (let row = 0; row < 3; row++) {
-          const fdDeriv = (perturbedVec[row] - baseVec[row]) / eps;
-          // J[row] is the row-vector, J[row][col] is the element
-          expect(J[row][col]).toBeCloseTo(fdDeriv, 4);
-        }
-      }
-    });
-  }
-});

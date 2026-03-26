@@ -6,7 +6,6 @@ import type {
   OptimizationFrame,
   Particle,
   Vec3,
-  WarpTransform,
 } from './types';
 import { vec3Scale, vec3Norm } from './math';
 
@@ -14,13 +13,13 @@ import { vec3Scale, vec3Norm } from './math';
  * Compute the minimum pairwise Euclidean distance in raw OKLab space
  * across all particle pairs.
  */
-export function pairwiseMinDeltaE(particles: readonly Particle[]): number {
-  const n = particles.length;
+export function pairwiseMinDeltaE(positions: readonly OKLab[]): number {
+  const n = positions.length;
   let min = Infinity;
   for (let i = 0; i < n; i++) {
-    const pi = particles[i].position;
+    const pi = positions[i];
     for (let j = i + 1; j < n; j++) {
-      const pj = particles[j].position;
+      const pj = positions[j];
       const dL = pi.L - pj.L;
       const da = pi.a - pj.a;
       const db = pi.b - pj.b;
@@ -112,7 +111,7 @@ export function createAnnealingSchedule(options?: AnnealingScheduleOptions): Ann
  *   1. Query schedule for p, kappa, stepSize
  *   2. Compute forces+energy via forces.computeForcesAndEnergy
  *   3. For free particles: project force, normalize by max force, scale by stepSize, apply
- *   4. Compute warpedPositions and minDeltaE
+ *   4. Compute oklabPositions and minDeltaE
  *   5. yield frame
  *   6. Check convergence
  */
@@ -120,7 +119,7 @@ export function* createOptimizationStepper(
   initialParticles: Particle[],
   forces: ForceComputer,
   constraint: MotionConstraint,
-  warp: WarpTransform,
+  inverseLift: (pos: OKLab) => OKLab,
   schedule: AnnealingSchedule,
 ): Generator<OptimizationFrame> {
   let particles = cloneParticles(initialParticles);
@@ -169,17 +168,17 @@ export function* createOptimizationStepper(
 
     particles = newParticles;
 
-    // Compute warped positions on the new state
-    const warpedPositions = particles.map(pt => warp.toWarped(pt.position));
+    // Compute OKLab positions on the new state
+    const oklabPositions = particles.map(pt => inverseLift(pt.position));
 
     // Compute min pairwise deltaE on the new state
-    const minDeltaE = pairwiseMinDeltaE(particles);
+    const minDeltaE = pairwiseMinDeltaE(oklabPositions);
 
     // Yield frame with deep copy of particles
     yield {
       iteration,
       particles: cloneParticles(particles),
-      warpedPositions,
+      oklabPositions,
       energy,
       minDeltaE,
       p,
