@@ -1,24 +1,24 @@
-import type { Particle, GamutChecker } from './types';
+import type { OKLab, GamutChecker } from './types';
 import { oklabToHex } from './color-conversion';
 
 export { oklabToHex } from './color-conversion';
 
 /**
- * Convert an array of particles to sRGB hex strings, clipping any out-of-gamut
- * positions to the sRGB boundary while preserving hue and lightness.
+ * Convert an array of OKLab positions to sRGB hex strings, clipping any
+ * out-of-gamut positions to the sRGB boundary while preserving hue and lightness.
  *
- * @returns colors - one #rrggbb string per particle, in the same order
- * @returns clippedIndices - indices of particles that required gamut clipping
+ * @returns colors - one #rrggbb string per position, in the same order
+ * @returns clippedIndices - indices of positions that required gamut clipping
  */
 export function finalizeColors(
-  particles: Particle[],
+  positions: OKLab[],
   gamut: GamutChecker,
 ): { colors: string[]; clippedIndices: number[] } {
   const colors: string[] = [];
   const clippedIndices: number[] = [];
 
-  for (let i = 0; i < particles.length; i++) {
-    const pos = particles[i].position;
+  for (let i = 0; i < positions.length; i++) {
+    const pos = positions[i];
 
     if (gamut.isInGamut(pos)) {
       colors.push(oklabToHex(pos));
