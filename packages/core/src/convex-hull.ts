@@ -44,15 +44,17 @@ interface Face {
 
 /**
  * Build a HullGeometry for a set of coplanar points by computing a 2D
- * convex hull, triangulating via a fan, and doubling the faces so both
- * sides are represented (important for visibility tests in later passes).
+ * convex hull, triangulating via a fan, and producing a single-sided
+ * open surface. Only hull vertices are included in the output (non-hull
+ * input points are excluded, matching the 3D hull's vertex filtering).
+ * Outer polygon edges are boundary edges; internal fan edges connect
+ * adjacent triangles.
  */
 function buildCoplanarHull(points: OKLab[]): HullGeometry {
   const verts = points.slice();
   const n = verts.length;
 
   // Project onto 2D using the first two linearly-independent directions.
-  // Since points are coplanar we just pick the axes with the most variance.
   const vs = verts.map(okLabToVec3);
 
   // Centroid
@@ -61,16 +63,12 @@ function buildCoplanarHull(points: OKLab[]): HullGeometry {
   const cz = vs.reduce((s, v) => s + v[2], 0) / n;
 
   // Build two orthonormal axes in the plane.
-  // First axis u: direction from centroid to the first non-coincident vertex.
   let u: Vec3 = [0, 0, 0];
   for (const v of vs) {
     const d: Vec3 = [v[0] - cx, v[1] - cy, v[2] - cz];
     const len = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
     if (len > 1e-10) { u = [d[0] / len, d[1] / len, d[2] / len]; break; }
   }
-  // Second axis w: perpendicular to u but still IN the plane.
-  // Strategy: find a point whose projection off of u is non-zero, use that
-  // component as w, then normalize.
   let w: Vec3 = [0, 0, 0];
   for (const v of vs) {
     const d: Vec3 = [v[0] - cx, v[1] - cy, v[2] - cz];
@@ -79,8 +77,6 @@ function buildCoplanarHull(points: OKLab[]): HullGeometry {
     const len = Math.sqrt(perp[0] * perp[0] + perp[1] * perp[1] + perp[2] * perp[2]);
     if (len > 1e-10) { w = [perp[0] / len, perp[1] / len, perp[2] / len]; break; }
   }
-  // If w is still zero (all points collinear in 3D), fall back to a perpendicular
-  // in an arbitrary direction — hull will degenerate but won't crash.
   if (w[0] === 0 && w[1] === 0 && w[2] === 0) {
     const tmp: Vec3 = Math.abs(u[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
     const wRaw = vec3Cross(u, tmp);
@@ -95,27 +91,28 @@ function buildCoplanarHull(points: OKLab[]): HullGeometry {
             dx * w[0] + dy * w[1] + dz * w[2]];
   });
 
-  // 2D convex hull (Graham scan)
+  // 2D convex hull (Graham scan) — returns indices into original points
   const hullIndices = convexHull2D(pts2d);
 
-  // Triangulate via fan from hullIndices[0]
-  // Front faces get even indices (0, 2, 4, ...), back faces get odd (1, 3, 5, ...)
-  const faces: Array<{ vertexIndices: [number, number, number] }> = [];
-
-  const h0 = hullIndices[0];
-  for (let k = 1; k + 1 < hullIndices.length; k++) {
-    const h1 = hullIndices[k];
-    const h2 = hullIndices[k + 1];
-    faces.push({ vertexIndices: [h0, h1, h2] });      // front face (even index)
-    faces.push({ vertexIndices: [h0, h2, h1] });       // back face (odd index)
+  // Remap hull vertex indices to a contiguous array (exclude non-hull points)
+  const oldToNew = new Map<number, number>();
+  const newVertices: OKLab[] = [];
+  for (const oi of hullIndices) {
+    oldToNew.set(oi, newVertices.length);
+    newVertices.push(verts[oi]);
   }
 
-  // Build adjacency with correct same-side pairing for internal fan edges.
-  // For each edge, collect all face indices that use it, then pair correctly:
-  //   - Boundary edges (2 faces): pair front ↔ back of same triangle
-  //   - Internal fan edges (4 faces): pair front ↔ front (adjacent triangles)
-  //     Back faces connect to front faces via boundary edges, so the full
-  //     surface remains navigable: B_k → F_k → F_{k+1} → B_{k+1}
+  // Triangulate via fan from first hull vertex (single-sided, no back faces)
+  const faces: Array<{ vertexIndices: [number, number, number] }> = [];
+  const nh0 = oldToNew.get(hullIndices[0])!;
+  for (let k = 1; k + 1 < hullIndices.length; k++) {
+    const nh1 = oldToNew.get(hullIndices[k])!;
+    const nh2 = oldToNew.get(hullIndices[k + 1])!;
+    faces.push({ vertexIndices: [nh0, nh1, nh2] });
+  }
+
+  // Build adjacency: each edge shared by 2 faces gets an adjacency entry.
+  // Outer polygon edges (shared by only 1 face) are boundary edges.
   const edgeToFaces = new Map<EdgeKey, number[]>();
   for (let fi = 0; fi < faces.length; fi++) {
     const [a, b, c] = faces[fi].vertexIndices;
@@ -126,24 +123,14 @@ function buildCoplanarHull(points: OKLab[]): HullGeometry {
     }
   }
 
-  const adj2 = new Map<EdgeKey, [number, number]>();
+  const adjacency = new Map<EdgeKey, [number, number]>();
   for (const [key, fis] of edgeToFaces) {
     if (fis.length === 2) {
-      // Boundary edge: connects front ↔ back of same triangle
-      adj2.set(key, [fis[0], fis[1]]);
-    } else if (fis.length >= 4) {
-      // Internal fan edge shared by 4+ faces.
-      // Pair the two front faces (even indices) for same-side navigation.
-      const frontFaces = fis.filter(fi => fi % 2 === 0);
-      if (frontFaces.length >= 2) {
-        adj2.set(key, [frontFaces[0], frontFaces[1]]);
-      } else {
-        adj2.set(key, [fis[0], fis[1]]);
-      }
+      adjacency.set(key, [fis[0], fis[1]]);
     }
   }
 
-  return { kind: 'hull', vertices: verts, faces, adjacency: adj2 };
+  return { kind: 'hull', vertices: newVertices, faces, adjacency };
 }
 
 /**
