@@ -125,7 +125,7 @@ export function* createOptimizationStepper(
   let particles = cloneParticles(initialParticles);
   let prevEnergy = Infinity;
 
-  for (let iteration = 0; iteration < 2000; iteration++) {
+  for (let iteration = 0; ; iteration++) {
     const p = schedule.getRieszExponent(iteration);
     const kappa = schedule.getGamutPenaltyWeight(iteration);
     const stepSize = schedule.getStepSize(iteration);
