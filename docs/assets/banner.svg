@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="200" viewBox="0 0 800 200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a12"/>
+      <stop offset="100%" stop-color="#141428"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e63946"/>
+      <stop offset="25%" stop-color="#f0932b"/>
+      <stop offset="50%" stop-color="#2a9d8f"/>
+      <stop offset="75%" stop-color="#457b9d"/>
+      <stop offset="100%" stop-color="#1d3557"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="url(#bg)" rx="12"/>
+
+  <!-- Subtle grid lines -->
+  <g opacity="0.04" stroke="#ffffff" stroke-width="0.5">
+    <line x1="0" y1="50" x2="800" y2="50"/>
+    <line x1="0" y1="100" x2="800" y2="100"/>
+    <line x1="0" y1="150" x2="800" y2="150"/>
+    <line x1="200" y1="0" x2="200" y2="200"/>
+    <line x1="400" y1="0" x2="400" y2="200"/>
+    <line x1="600" y1="0" x2="600" y2="200"/>
+  </g>
+
+  <!--
+    Decorative tetrahedron (right side)
+    Vertices: A=(580,140) B=(670,50) C=(750,130) D=(640,110)
+    Free particles computed as barycentric combos on faces.
+  -->
+  <!-- Front face edges: A-B, A-C, B-C -->
+  <line x1="580" y1="140" x2="670" y2="50" stroke="#ffffff" stroke-width="1" opacity="0.12"/>
+  <line x1="580" y1="140" x2="750" y2="130" stroke="#ffffff" stroke-width="1" opacity="0.12"/>
+  <line x1="670" y1="50" x2="750" y2="130" stroke="#ffffff" stroke-width="1" opacity="0.12"/>
+  <!-- Back edges to D: A-D, B-D, C-D -->
+  <line x1="580" y1="140" x2="640" y2="110" stroke="#ffffff" stroke-width="0.6" opacity="0.07" stroke-dasharray="5,4"/>
+  <line x1="670" y1="50" x2="640" y2="110" stroke="#ffffff" stroke-width="0.6" opacity="0.07" stroke-dasharray="5,4"/>
+  <line x1="750" y1="130" x2="640" y2="110" stroke="#ffffff" stroke-width="0.6" opacity="0.07" stroke-dasharray="5,4"/>
+
+  <!-- Seed vertices -->
+  <circle cx="580" cy="140" r="4" fill="#e63946" opacity="0.5"/>
+  <circle cx="670" cy="50" r="4" fill="#2a9d8f" opacity="0.5"/>
+  <circle cx="750" cy="130" r="4" fill="#457b9d" opacity="0.5"/>
+  <circle cx="640" cy="110" r="3.5" fill="#f0932b" opacity="0.4"/>
+
+  <!-- Free particles on faces (barycentric combos) -->
+  <!-- On face ABD: 0.3A+0.4B+0.3D = (630,91) -->
+  <circle cx="630" cy="91" r="2.5" fill="#1d3557" opacity="0.3"/>
+  <!-- On face ACD: 0.4A+0.3C+0.3D = (649,125) -->
+  <circle cx="649" cy="125" r="2.5" fill="#a09080" opacity="0.3"/>
+  <!-- On face BCD: 0.3B+0.4C+0.3D = (693,97) -->
+  <circle cx="693" cy="97" r="2.5" fill="#ee5a24" opacity="0.3"/>
+  <!-- On face ABC: 0.2A+0.3B+0.5C = (692,102) — too close to BCD. Use 0.2A+0.5B+0.3C = (676,84) -->
+  <circle cx="676" cy="84" r="2.5" fill="#ffbe76" opacity="0.3"/>
+
+  <!-- Title -->
+  <text x="50" y="95" fill="#f0f6fc" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="52" font-weight="700" letter-spacing="-1">Facette</text>
+
+  <!-- Tagline -->
+  <text x="53" y="125" fill="#8b949e" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="15" font-weight="400">Perceptual color palette generation</text>
+
+  <!-- Accent bar -->
+  <rect x="50" y="142" width="200" height="3" rx="1.5" fill="url(#accent)" opacity="0.8"/>
+
+  <!-- Palette preview strip -->
+  <g transform="translate(50, 158)">
+    <rect x="0" y="0" width="26" height="26" rx="5" fill="#e63946"/>
+    <rect x="30" y="0" width="26" height="26" rx="5" fill="#d45553"/>
+    <rect x="60" y="0" width="26" height="26" rx="5" fill="#a77b6c"/>
+    <rect x="90" y="0" width="26" height="26" rx="5" fill="#6e9282"/>
+    <rect x="120" y="0" width="26" height="26" rx="5" fill="#2a9d8f"/>
+    <rect x="150" y="0" width="26" height="26" rx="5" fill="#457b9d"/>
+    <rect x="180" y="0" width="26" height="26" rx="5" fill="#1d3557"/>
+  </g>
+</svg>
