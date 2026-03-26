@@ -1,5 +1,5 @@
 import type { OKLab, OKLCh, LinRGB } from './types';
-import { mat3MulVec3, mat3Mul, type Mat3 } from './math';
+import { mat3MulVec3, type Mat3 } from './math';
 
 // ── Ottosson OKLab matrices ──────────────────────────────────────────────────
 
@@ -135,29 +135,3 @@ export function oklchToOklab(lch: OKLCh): OKLab {
   };
 }
 
-// ── OKLab → linear RGB Jacobian ──────────────────────────────────────────────
-
-/**
- * Compute the 3×3 Jacobian d(linRGB)/d(OKLab) at the given OKLab position.
- *
- * Algorithm (Section 5.2a):
- *   J = M1_inv · diag(3·l̂², 3·m̂², 3·ŝ²) · M2_inv
- * where (l̂, m̂, ŝ) = M2_inv · (L, a, b) are the LMS^(1/3) intermediates.
- */
-export function oklabToLinearRgbJacobian(pos: OKLab): Mat3 {
-  const labVec = [pos.L, pos.a, pos.b] as [number, number, number];
-
-  // (l_hat, m_hat, s_hat) = M2_inv · (L, a, b)
-  const lmsCbrt = mat3MulVec3(M2_INV, labVec);
-  const [lHat, mHat, sHat] = lmsCbrt;
-
-  // diag(3*l_hat^2, 3*m_hat^2, 3*s_hat^2)
-  const diagScale: Mat3 = [
-    [3 * lHat * lHat, 0, 0],
-    [0, 3 * mHat * mHat, 0],
-    [0, 0, 3 * sHat * sHat],
-  ];
-
-  // J = M1_inv · diagScale · M2_inv
-  return mat3Mul(M1_INV, mat3Mul(diagScale, M2_INV));
-}
