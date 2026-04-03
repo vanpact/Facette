@@ -5,6 +5,39 @@ All notable changes to the `facette` package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-04
+
+V5.1: Adaptive gamma and lightness stretching.
+
+### Added
+
+- **Adaptive gamma** — γ is now computed automatically from seed hue spread: `γ = 1 + v × Δh_max / π`. Narrow-hue palettes get γ ≈ 1 (no distortion), wide-hue palettes get up to γ = 3 (strong chroma preservation). Controlled by the `vividness` parameter.
+- **Lightness stretching** — new `spread` parameter (range [1, 2], default 1.2) applies an affine L-stretch around the seed lightness centroid, expanding the hull in the lightness dimension for greater lightness diversity.
+- `adaptive-gamma.ts` — standalone pure function for hue-spread-based gamma computation
+- `space-lift.ts` — unified OKLab ↔ working-space transform combining radial chroma lift + affine L-stretch, with exact closed-form inverse
+- `SpaceTransform` interface — narrow transform interface for consumers (ISP)
+- `SpaceLiftConfig` interface — grouped construction parameters for diagnostics/tracing
+- `SpaceLift` interface — full transform + config, extends `SpaceTransform`
+
+### Changed
+
+- **`vividness` parameter** — repurposed from gray avoidance radius override (range [0.005, 0.10]) to adaptive gamma coefficient (range [0, 4], default 2). At `0`, γ = 1 always (V5.0 behavior).
+- **`OptimizationTrace`** — `rs`, `gamma`, `R` replaced by `liftConfig: SpaceLiftConfig` and `vividness: number`
+- **`PaletteOptions`** — `gamma` removed (computed internally), `spread` added
+- `energy.ts` depends on narrow `SpaceTransform` instead of full `RadialLift` (ISP)
+
+### Removed
+
+- `radial-lift.ts` — replaced by `space-lift.ts`
+- `RadialLift` interface — replaced by `SpaceTransform` / `SpaceLift`
+- `gamma` option — no longer user-facing; computed adaptively from `vividness` and seed hue spread
+- `vividness` as r_s override — r_s is now always computed automatically
+
+### Regression Safety
+
+- At `vividness: 0, spread: 1`: γ = 1, L-stretch is identity — identical to V5.0 default behavior
+- At `vividness: 2, spread: 1` with narrow-hue seeds: γ ≈ 1 — near-identical to V5.0
+
 ## [0.1.1] - 2026-03-27
 
 ### Fixed
