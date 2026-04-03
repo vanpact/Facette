@@ -5,7 +5,8 @@ beforeEach(() => {
   useStore.setState({
     seeds: ['#e63946', '#457b9d', '#1d3557'],
     paletteSize: 8,
-    vividness: 0,
+    vividness: 2,
+    spread: 1.2,
     trace: null,
     isComputing: false,
     showSeeds: true,
@@ -50,8 +51,13 @@ describe('paletteSlice', () => {
   });
 
   it('setVividness updates', () => {
-    useStore.getState().setVividness(0.05);
-    expect(useStore.getState().vividness).toBe(0.05);
+    useStore.getState().setVividness(3);
+    expect(useStore.getState().vividness).toBe(3);
+  });
+
+  it('setSpread updates', () => {
+    useStore.getState().setSpread(1.5);
+    expect(useStore.getState().spread).toBe(1.5);
   });
 });
 
