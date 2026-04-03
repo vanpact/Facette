@@ -1,6 +1,6 @@
 {
   "name": "facette",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Perceptual color palette generation via particle repulsion on convex hulls in OKLab space",
   "type": "module",
   "main": "./dist/index.cjs",
