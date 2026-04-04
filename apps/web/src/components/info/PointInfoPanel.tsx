@@ -34,7 +34,7 @@ export function PointInfoPanel() {
         <div>OKLCh: {formatOKLCh(lch)}</div>
         <div>Lifted: {formatOKLab(pos)}</div>
         <div>RGB: {formatRGB(hex)}</div>
-        <div className="text-gray-500 mt-1">γ: {trace.liftConfig.gamma.toFixed(2)} · s: {trace.liftConfig.spread.toFixed(2)}</div>
+        <div className="text-gray-500 mt-1">γ: {trace.liftConfig.gamma.toFixed(2)} · s: {trace.spread.toFixed(2)}</div>
       </div>
     </div>
   );

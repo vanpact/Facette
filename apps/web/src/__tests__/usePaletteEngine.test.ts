@@ -51,8 +51,8 @@ describe('palette engine integration', () => {
     const trace = stepper.run();
     expect(trace.liftConfig.gamma).toBeGreaterThanOrEqual(1);
     expect(trace.liftConfig.R).toBeGreaterThan(0);
-    expect(trace.liftConfig.spread).toBe(1.5);
-    expect(trace.liftConfig.Lc).toBeDefined();
+    expect(trace.spread).toBe(1.5);
+    expect(trace.Lc).toBeDefined();
     expect(trace.vividness).toBe(2);
   });
 });
