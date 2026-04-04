@@ -23,28 +23,28 @@ const examples: Example[] = [
     seeds: ['#ff6b6b', '#ee5a24', '#f0932b', '#ffbe76'],
     size: 8,
     vividness: 1.0,
-    spread: 2,
+    spread: 2.0,
   },
   {
     label: 'Muted earth tones',
     seeds: ['#a09080', '#8e7b6b', '#6b7e6b'],
     size: 6,
     vividness: 1.0,
-    spread: 5.0,
+    spread: 2.0,
   },
   {
     label: 'Full spectrum',
     seeds: ['#a92323', '#4c85a9', '#1d3557', '#707a00'],
     size: 10,
     vividness: 1.0,
-    spread: 1.2,
+    spread: 2.0,
   },
   {
     label: 'Vivid rainbow',
     seeds: ['#ff2d55', '#ff9500', '#34c759', '#007aff', '#af52de', '#ffcc00'],
-    size: 10,
+    size: 12,
     vividness: 3.0,
-    spread: 1.2,
+    spread: 2.0,
   },
 ];
 
