@@ -94,10 +94,13 @@ describe('SpaceLift', () => {
       expect(l.L).toBeLessThan(0.3);
     });
 
-    it('fromLifted inverts L-stretch exactly', () => {
+    it('fromLifted does NOT invert L-stretch (one-directional)', () => {
       const pos = { L: 0.7, a: 0.08, b: -0.03 };
-      const back = liftStretch.fromLifted(liftStretch.toLifted(pos));
-      expect(back.L).toBeCloseTo(pos.L, 8);
+      const lifted = liftStretch.toLifted(pos);
+      const back = liftStretch.fromLifted(lifted);
+      // L stays at stretched value (not inverted back to 0.7)
+      expect(back.L).toBeCloseTo(lifted.L, 8);
+      // (a, b) are radially inverted
       expect(back.a).toBeCloseTo(pos.a, 8);
       expect(back.b).toBeCloseTo(pos.b, 8);
     });
@@ -117,13 +120,27 @@ describe('SpaceLift', () => {
       expect(v51.b).toBeCloseTo(v50.b, 10);
     });
 
-    it('round-trip toLifted → fromLifted is identity (spread + gamma combined)', () => {
+    it('round-trip inverts (a,b) but preserves stretched L', () => {
       const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 2, spread: 1.8, Lc: 0.45 });
       const pos = { L: 0.75, a: 0.12, b: -0.06 };
-      const back = lift.fromLifted(lift.toLifted(pos));
-      expect(back.L).toBeCloseTo(pos.L, 8);
+      const lifted = lift.toLifted(pos);
+      const back = lift.fromLifted(lifted);
+      // L remains stretched
+      expect(back.L).toBeCloseTo(0.45 + 1.8 * (0.75 - 0.45), 8);
+      // (a, b) round-trip correctly
       expect(back.a).toBeCloseTo(pos.a, 8);
       expect(back.b).toBeCloseTo(pos.b, 8);
+    });
+
+    it('output L extends beyond seed range for hull surface points', () => {
+      // Simulates a particle at the hull extreme in working space
+      const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 2, Lc: 0.5 });
+      // Seed at L=0.6 → working L = 0.5 + 2*(0.6-0.5) = 0.7
+      const seedLifted = lift.toLifted({ L: 0.6, a: 0.1, b: 0 });
+      expect(seedLifted.L).toBeCloseTo(0.7, 10);
+      // fromLifted preserves L=0.7 (beyond seed L=0.6)
+      const output = lift.fromLifted(seedLifted);
+      expect(output.L).toBeCloseTo(0.7, 10);
     });
 
     it('toLifted preserves hue angle with L-stretch active', () => {

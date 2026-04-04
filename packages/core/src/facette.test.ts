@@ -127,10 +127,10 @@ describe('L-stretch integration', () => {
     expect(trace.liftConfig.spread).toBe(1.5);
   });
 
-  it('default spread is 1.2', () => {
+  it('default spread is 1.5', () => {
     const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4);
     const trace = stepper.run();
-    expect(trace.liftConfig.spread).toBe(1.2);
+    expect(trace.liftConfig.spread).toBe(1.5);
   });
 });
 

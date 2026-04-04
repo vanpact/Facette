@@ -37,12 +37,12 @@ console.log(result.colors);
 ```ts
 const result = generatePalette(seeds, 8, {
   vividness: 2,    // 0–4, default 2. Controls adaptive chroma preservation.
-  spread: 1.2,     // 1–2, default 1.2. Lightness range expansion.
+  spread: 1.5,     // 1–2, default 1.5. Lightness range expansion.
 });
 ```
 
 - **`vividness`** — controls how strongly the algorithm preserves chroma on intermediate colors between seeds at wide hue separations. The algorithm computes γ adaptively from seed hue configuration: `γ = 1 + vividness × Δh_max / π`. At `0`, no adaptive chroma preservation (γ = 1 always). At `2` (default), moderate adaptation. Higher values produce more aggressive preservation.
-- **`spread`** — controls how much the palette's lightness range extends beyond the seeds. At `1` (no stretching), colors stay within the seed lightness range. At `1.2` (default), a 20% expansion. At `2`, the lightness range is doubled.
+- **`spread`** — controls how much the palette's lightness range extends beyond the seeds. At `1` (no stretching), colors stay within the seed lightness range. At `1.5` (default), a 50% expansion. At `2`, the lightness range is doubled.
 
 ### Stepper API
 
@@ -74,7 +74,7 @@ console.log(trace.geometry.kind);     // 'line' or 'hull'
 | `seeds` | `string[]` | Hex colors (e.g. `['#ff0000', '#0000ff']`). Minimum 2, must be distinct. |
 | `size` | `number` | Total palette size including seeds. Must be >= seed count. |
 | `options.vividness` | `number` | Adaptive gamma coefficient. Default `2`. Range `[0, 4]`. |
-| `options.spread` | `number` | Lightness range expansion. Default `1.2`. Range `[1, 2]`. |
+| `options.spread` | `number` | Lightness range expansion. Default `1.5`. Range `[1, 2]`. |
 
 **Returns** `PaletteResult`:
 

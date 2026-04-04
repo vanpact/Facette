@@ -115,7 +115,7 @@ export function createPaletteStepper(
   const chromas = oklabSeeds.map(s => Math.sqrt(s.a * s.a + s.b * s.b));
   const rs = computeRs(chromas);
   const R = Math.max(...chromas);
-  const spread = options?.spread ?? 1.2;
+  const spread = options?.spread ?? 1.5;
   const Lc = oklabSeeds.reduce((sum, s) => sum + s.L, 0) / oklabSeeds.length;
 
   // 5. Create space lift
@@ -219,7 +219,12 @@ export function createPaletteStepper(
     run() {
       const allFrames = [...this.frames()];
       const lastFrame = allFrames[allFrames.length - 1];
-      const oklabPositions = lastFrame.particles.map(p => lift.fromLifted(p.position));
+      // Seeds get their original OKLab positions (the L-stretch is one-directional,
+      // so fromLifted would give stretched L values for seeds — restore originals).
+      // Free particles get fromLifted which preserves stretched L (intended).
+      const oklabPositions = lastFrame.particles.map((p, i) =>
+        i < oklabSeeds.length ? oklabSeeds[i] : lift.fromLifted(p.position),
+      );
       const { colors, clippedIndices } = finalizeColors(oklabPositions, gamut);
       return {
         geometry: displayGeometry,

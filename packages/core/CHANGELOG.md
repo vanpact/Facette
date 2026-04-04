@@ -12,9 +12,9 @@ V5.1: Adaptive gamma and lightness stretching.
 ### Added
 
 - **Adaptive gamma** — γ is now computed automatically from seed hue spread: `γ = 1 + v × Δh_max / π`. Narrow-hue palettes get γ ≈ 1 (no distortion), wide-hue palettes get up to γ = 3 (strong chroma preservation). Controlled by the `vividness` parameter.
-- **Lightness stretching** — new `spread` parameter (range [1, 2], default 1.2) applies an affine L-stretch around the seed lightness centroid, expanding the hull in the lightness dimension for greater lightness diversity.
+- **Lightness stretching** — new `spread` parameter (range [1, 2], default 1.5) applies a one-directional L-stretch around the seed lightness centroid, expanding the hull and output lightness range beyond the seeds for greater lightness diversity.
 - `adaptive-gamma.ts` — standalone pure function for hue-spread-based gamma computation
-- `space-lift.ts` — unified OKLab ↔ working-space transform combining radial chroma lift + affine L-stretch, with exact closed-form inverse
+- `space-lift.ts` — unified OKLab ↔ working-space transform combining radial chroma lift + one-directional L-stretch
 - `SpaceTransform` interface — narrow transform interface for consumers (ISP)
 - `SpaceLiftConfig` interface — grouped construction parameters for diagnostics/tracing
 - `SpaceLift` interface — full transform + config, extends `SpaceTransform`
@@ -25,6 +25,10 @@ V5.1: Adaptive gamma and lightness stretching.
 - **`OptimizationTrace`** — `rs`, `gamma`, `R` replaced by `liftConfig: SpaceLiftConfig` and `vividness: number`
 - **`PaletteOptions`** — `gamma` removed (computed internally), `spread` added
 - `energy.ts` depends on narrow `SpaceTransform` instead of full `RadialLift` (ISP)
+
+### Fixed
+
+- **L-stretch had no effect on output** — `fromLifted` was fully inverting the L-stretch, so the affine expansion and contraction cancelled out on hull surface points. Output L range was identical to seed L range regardless of `spread`. Fixed by making the L-stretch one-directional: `toLifted` expands L for hull construction, `fromLifted` only inverts the radial lift, preserving the expanded L values in the output.
 
 ### Removed
 

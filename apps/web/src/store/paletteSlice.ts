@@ -24,7 +24,7 @@ export const createPaletteSlice: StateCreator<PaletteSlice, [], [], PaletteSlice
   seeds: ['#e63946', '#457b9d', '#1d3557'],
   paletteSize: 8,
   vividness: 2,
-  spread: 1.2,
+  spread: 1.5,
   trace: null,
   isComputing: false,
 

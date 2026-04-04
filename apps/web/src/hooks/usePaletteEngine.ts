@@ -22,7 +22,7 @@ export function usePaletteEngine() {
     try {
       const options: PaletteOptions = {};
       if (vividness !== 2) options.vividness = vividness;
-      if (spread !== 1.2) options.spread = spread;
+      if (spread !== 1.5) options.spread = spread;
       const stepper = createPaletteStepper(seeds, paletteSize,
         Object.keys(options).length > 0 ? options : undefined);
       const trace = stepper.run();

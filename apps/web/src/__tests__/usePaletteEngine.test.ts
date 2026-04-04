@@ -7,7 +7,7 @@ beforeEach(() => {
     seeds: ['#ff0000', '#0000ff'],
     paletteSize: 4,
     vividness: 2,
-    spread: 1.2,
+    spread: 1.5,
     trace: null,
     isComputing: false,
   });
@@ -51,7 +51,7 @@ describe('palette engine integration', () => {
     const trace = stepper.run();
     expect(trace.liftConfig.gamma).toBeGreaterThanOrEqual(1);
     expect(trace.liftConfig.R).toBeGreaterThan(0);
-    expect(trace.liftConfig.spread).toBe(1.2);
+    expect(trace.liftConfig.spread).toBe(1.5);
     expect(trace.liftConfig.Lc).toBeDefined();
     expect(trace.vividness).toBe(2);
   });

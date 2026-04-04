@@ -6,6 +6,12 @@ import type { OKLab, SpaceLift, SpaceLiftConfig } from './types';
  * - L-stretch: Lc + spread * (L - Lc) on the L axis
  *
  * The two components act on independent coordinates and commute.
+ *
+ * The L-stretch is intentionally one-directional: toLifted expands L for
+ * hull construction, but fromLifted does NOT contract L back. This allows
+ * free particles to output L values beyond the seed range. Only the radial
+ * lift is inverted (it's nonlinear and must be undone for correct chroma).
+ *
  * At spread=1, gamma=1 this is equivalent to V5.0's RadialLift.
  */
 export function createSpaceLift(config: SpaceLiftConfig): SpaceLift {
@@ -33,16 +39,16 @@ export function createSpaceLift(config: SpaceLiftConfig): SpaceLift {
   function fromLifted(pos: OKLab): OKLab {
     const { L, a, b } = pos;
 
-    // Inverse L-stretch
-    const origL = Lc + (L - Lc) / spread;
+    // L is NOT un-stretched: the L-stretch is one-directional.
+    // This lets free particles output L values beyond the seed range.
 
-    // Inverse radial lift
+    // Inverse radial lift only
     const rhoVal = Math.sqrt(a * a + b * b);
-    if (rhoVal < 1e-15) return { L: origL, a: 0, b: 0 };
+    if (rhoVal < 1e-15) return { L, a: 0, b: 0 };
     const u = fR * Math.pow(rhoVal / R, 1 / gamma);
     const r = (u + Math.sqrt(u * u + 4 * u * rs)) / 2;
     const scale = r / rhoVal;
-    return { L: origL, a: a * scale, b: b * scale };
+    return { L, a: a * scale, b: b * scale };
   }
 
   return { toLifted, fromLifted, config };
