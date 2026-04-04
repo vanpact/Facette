@@ -31,9 +31,9 @@
     <polygon points="24,-4 32,0 24,4" fill="#484f58"/>
   </g>
 
-  <!-- ═══ Stage 2: Radial Lift ═══ -->
+  <!-- ═══ Stage 2: L-Stretch + Radial Lift ═══ -->
   <g transform="translate(155, 18)">
-    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">RADIAL LIFT</text>
+    <text x="55" y="10" fill="#8b949e" font-family="system-ui, -apple-system, sans-serif" font-size="10" text-anchor="middle" font-weight="600" letter-spacing="0.5">L-STRETCH + LIFT</text>
     <!-- Gray axis (L axis = x=55 vertical) -->
     <line x1="55" y1="16" x2="55" y2="110" stroke="#484f58" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
     <!-- Seeds contracted toward gray axis: low-chroma seeds move closer, high-chroma stay -->
@@ -50,7 +50,7 @@
     <circle cx="48" cy="58" r="4" fill="#f0932b" opacity="0.4"/>
     <circle cx="51" cy="58" r="5" fill="#f0932b"/>
     <!-- Arrows showing contraction -->
-    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="8" text-anchor="middle" font-style="italic">gray contracts</text>
+    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="8" text-anchor="middle" font-style="italic">L-stretch, gray contracts</text>
   </g>
 
   <!-- Arrow 2 -->

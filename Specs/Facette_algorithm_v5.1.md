@@ -47,7 +47,7 @@ The neutral gray axis is the L axis (a = 0, b = 0). Euclidean distance in OKLab 
 
 ---
 
-## 3. Architecture: The Unified Space Lift
+## 3. Architecture: Space Lift and L-Stretch
 
 ### 3.1 Core Idea
 
@@ -56,7 +56,7 @@ Previous versions of this algorithm suffered from a structural split: geometry (
 - **Gray avoidance required a separate energy mechanism** — the warped metric had to fight the OKLab geometry, pushing particles away from gray regions that flat OKLab faces forced them to occupy.
 - **Chroma dip on intermediate colors** — flat faces between vivid seeds at different hues cut straight chords through OKLab, dipping to lower chroma at the midpoint (midpoint chroma = R·cos(θ/2) for hue separation θ).
 
-V5 eliminates this split. **Everything — hull construction, atlas, optimization — operates in a single working space.** Seeds are transformed before hull construction; final positions are transformed back for output. The working space is Cartesian, so convex hulls, flat faces, Euclidean distances, and barycentric interpolation all remain valid. The space lift combines a radial chroma lift with an affine lightness stretch, serving four roles simultaneously:
+V5 eliminates this split. **Everything — hull construction, atlas, optimization — operates in a single working space.** Seeds are L-stretched and radially lifted before hull construction; final positions are transformed back for output. The working space is Cartesian, so convex hulls, flat faces, Euclidean distances, and barycentric interpolation all remain valid. The radial lift and L-stretch serve four roles simultaneously:
 
 1. **Gray avoidance:** the radial lift contracts the low-chroma region, reducing surface area near the gray axis. Particles spread proportionally to available area, naturally avoiding gray.
 2. **Chroma preservation:** the convexity of the lift function guarantees (via Jensen's inequality) that inverse-mapped face interiors maintain higher chroma than flat OKLab interpolation.
@@ -102,25 +102,38 @@ No numerical root-finding required. The full inverse transform T_ρ⁻¹ applies
 
 **γ is computed adaptively** from the seed hue configuration (Section 4.3). It is not a user parameter. The user controls the sensitivity of γ to hue spread via the `vividness` parameter (Section 4.3).
 
-### 3.3 The Combined Space Lift
+### 3.3 The Space Lift and L-Stretch
 
-The space lift combines the radial chroma lift (Section 3.2) with an affine lightness stretch (Section 4.6) into a single coordinate transform. The two components act on independent coordinates — the radial lift on (a, b), the L-stretch on L — and commute.
+The algorithm applies two independent operations to prepare seeds for hull construction:
 
-**The forward transform:**
+1. **L-stretch (preprocessing):** an affine scaling of seed lightness values around their median, expanding the hull in the lightness dimension. Applied by the orchestrator (`facette.ts`) before the space lift.
+2. **Radial lift (coordinate transform):** the nonlinear chroma contraction defined in Section 3.2, operating only on the (a, b) plane. Implemented in `space-lift.ts`.
 
-$$T(L, a, b) = \left(L_c + s \cdot (L - L_c),\; \frac{\rho(r)}{r} \cdot a,\; \frac{\rho(r)}{r} \cdot b\right) \quad \text{for } r > 0$$
+The two operations act on independent coordinates — the L-stretch on L, the radial lift on (a, b) — and commute.
 
-$$T(L, 0, 0) = \left(L_c + s \cdot (L - L_c),\; 0,\; 0\right)$$
+**The radial lift (the space transform T):**
 
-where s is the spread parameter (Section 4.6) and L_c is the mean seed lightness. Hue angles are preserved. Lightness is scaled around L_c.
+$$T(L, a, b) = \left(L,\; \frac{\rho(r)}{r} \cdot a,\; \frac{\rho(r)}{r} \cdot b\right) \quad \text{for } r > 0$$
+
+$$T(L, 0, 0) = (L, 0, 0)$$
+
+Lightness passes through unchanged. Hue angles are preserved. Only chroma is remapped.
 
 **The inverse transform:**
 
-$$T^{-1}(L', a', b') = \left(L_c + \frac{L' - L_c}{s},\; \frac{r}{\rho} \cdot a',\; \frac{r}{\rho} \cdot b'\right)$$
+$$T^{-1}(L', a', b') = \left(L',\; \frac{r}{\rho} \cdot a',\; \frac{r}{\rho} \cdot b'\right)$$
 
-where r is recovered from ρ via the closed-form inverse (Section 3.2). Both directions are closed-form — no numerical root-finding.
+where r is recovered from ρ via the closed-form inverse (Section 3.2). T is a true algebraic inverse: $T^{-1}(T(x)) = x$ for all x. Both directions are closed-form — no numerical root-finding.
 
-**Implementation design:** the space lift is implemented as a single module (`space-lift.ts`) that owns the complete coordinate transform. The two sub-components (radial lift on a,b and L-stretch on L) are internal details, invisible to consumers. Consumers depend on a narrow `SpaceTransform` interface (just `toLifted`/`fromLifted`), following the interface segregation principle. Construction parameters are grouped in a `SpaceLiftConfig` object, accessible only through the full `SpaceLift` interface used by the orchestrator for diagnostic tracing. This separation ensures the transform contract is stable even as the parameter set evolves.
+**The L-stretch (seed preprocessing S):**
+
+$$S(L) = L_c + s \cdot (L - L_c)$$
+
+where s is the spread parameter (Section 4.6) and $L_c$ is the median seed lightness. S is applied to seed L values before T. It is not part of the space lift module.
+
+**Pipeline:** seeds are converted to OKLab, L-stretched via S, then transformed via T. Free particles in working space naturally inherit extended L values from the stretched hull geometry. At output, seeds are restored to their original OKLab positions; free particles are inverse-lifted via T⁻¹, which preserves their (stretched) L values.
+
+**Implementation design:** the radial lift is implemented as `space-lift.ts`, which owns the coordinate transform T and its inverse. The L-stretch is applied by the orchestrator as a preprocessing step. Consumers depend on a narrow `SpaceTransform` interface (just `toLifted`/`fromLifted`), following the interface segregation principle. Construction parameters (`rs`, `R`, `gamma`) are grouped in a `SpaceLiftConfig` object, accessible through the full `SpaceLift` interface for diagnostic tracing. The `spread` and `Lc` values are stored separately on the `OptimizationTrace`.
 
 ### 3.4 Seed Geometry and Dimensionality
 
@@ -128,7 +141,7 @@ The algorithm operates entirely in working space from this point forward. All ge
 
 #### 3.4.1 Pipeline Entry: Transform Seeds
 
-Convert seeds from sRGB to OKLab, then apply the space lift T. All subsequent geometry uses the fully transformed seed positions.
+Convert seeds from sRGB to OKLab, apply the L-stretch S (Section 4.6) to expand lightness around the median, then apply the radial lift T. All subsequent geometry uses the fully transformed seed positions.
 
 #### 3.4.2 Dimensionality Detection
 
@@ -141,7 +154,7 @@ Given the working-space seed points, compute the singular values (σ_1 ≥ σ_2 
 
 The threshold τ_dim should be set relative to σ_1 — for example, τ_dim = 1e-4 · σ_1. This catches near-degenerate configurations where the hull would be technically 3D but numerically fragile. Collapsing such cases to the lower-dimensional pipeline is safer than attempting to operate on a sliver hull.
 
-**Note on dimensionality preservation:** the radial lift does not change hue angles or lightness. The L-stretch is an affine scaling of L that preserves collinearity and coplanarity (affine transforms map k-dimensional affine subspaces to k-dimensional affine subspaces). Since s ≥ 1, the L-stretch cannot decrease rank. Seeds that are collinear in OKLab remain collinear in working space. Seeds that are coplanar in OKLab may or may not remain coplanar in working space (the nonlinear radial rescaling can break coplanarity). Dimensionality detection in working space correctly reflects the geometry in which the algorithm operates.
+**Note on dimensionality preservation:** the radial lift does not change hue angles or lightness. The L-stretch is an affine scaling of L that preserves collinearity and coplanarity (affine transforms map k-dimensional affine subspaces to k-dimensional affine subspaces). Since s ≥ 1, the L-stretch cannot decrease rank. Seeds that are collinear in OKLab remain collinear after L-stretch and radial lift. Seeds that are coplanar in OKLab may or may not remain coplanar in working space (the nonlinear radial rescaling can break coplanarity). Dimensionality detection in working space correctly reflects the geometry in which the algorithm operates.
 
 #### 3.4.3 Seed Classification: Hull Vertices, Boundary Seeds, and Interior Seeds
 
@@ -338,9 +351,9 @@ The lightness stretch is an affine scaling of the L coordinate that expands the 
 
 **Transform:**
 
-Given the seed lightness centroid:
+Given the seed lightness median:
 
-$$L_c = \frac{1}{|\text{seeds}|} \sum_i L_i$$
+$$L_c = \text{median}_i(L_i)$$
 
 and spread parameter $s \geq 1$, the lightness stretch is:
 
@@ -350,7 +363,7 @@ The inverse is:
 
 $$S^{-1}(L') = L_c + \frac{L' - L_c}{s}$$
 
-Both S and S⁻¹ are part of the space lift's `toLifted` and `fromLifted` methods. They are not separate operations visible to consumers.
+S is applied as a seed preprocessing step in the orchestrator (`facette.ts`) before calling the radial lift. S⁻¹ is not applied during output — seeds are restored to their original OKLab positions, and free particles retain their stretched L values from the hull geometry.
 
 **Properties:**
 
@@ -376,11 +389,11 @@ If all seeds share the same lightness ($L_{\min} = L_{\max}$), then $L_c = L_{\m
 | Value | Effect |
 |-------|--------|
 | 1.0 | No stretching. V5.0 behavior. |
-| 1.2 (default) | 20% expansion of the L range. Mild lightness diversity boost. |
-| 1.5 | 50% expansion. Noticeable lightness spread. |
-| 2.0 | 100% expansion (double the L range). Maximum lightness diversity. |
+| 1.5 (default) | 50% expansion of the L range. Moderate lightness diversity boost. |
+| 2.0 | 100% expansion (double the L range). Strong lightness diversity. |
+| 5.0 | 400% expansion. Maximum lightness diversity; may increase gamut clipping. |
 
-Range: [1, 2].
+Range: [1, 5].
 
 ---
 
@@ -406,7 +419,7 @@ $$E_{\text{gamut}} = \kappa \sum_i \sum_{c \in \{R,G,B\}} \left[\max(0, -c_i)^2 
 
 This penalizes channels below 0 or above 1 with a smooth quadratic ramp. Zero for in-gamut points.
 
-**Gradient computation:** use finite differences in working space. For each out-of-gamut particle, perturb each working-space coordinate by ε, map through T⁻¹ and RGB conversion, recompute penalty, get the numerical gradient. This costs 3 extra T⁻¹ evaluations per out-of-gamut particle per iteration. The L-stretch component of the inverse is a single division — negligible additional cost over V5.0.
+**Gradient computation:** use finite differences in working space. For each out-of-gamut particle, perturb each working-space coordinate by ε, map through T⁻¹ and RGB conversion, recompute penalty, get the numerical gradient. This costs 3 extra T⁻¹ evaluations per out-of-gamut particle per iteration. The inverse radial lift is closed-form — negligible cost.
 
 **Why finite differences:** the analytical gradient requires composing the Jacobians of the inverse radial lift and the OKLab→linear-RGB conversion (which includes a non-constant cubic diagonal). Finite differences are trivially correct, easy to implement, and the cost is negligible — most particles are in gamut (zero penalty, no gradient needed).
 
@@ -549,7 +562,7 @@ For palette-sized problems (N < 20), convergence typically requires 200–1000 i
 
 ### 9.1 Inverse Transform
 
-Apply T⁻¹ to all final particle positions, mapping from working space back to OKLab. Flat faces in working space become curved surfaces in OKLab that arc outward from the L axis (radial lift effect) and span a wider lightness range than the seeds alone (L-stretch effect).
+Apply T⁻¹ (the inverse radial lift) to all final free-particle positions, mapping from working space back to OKLab. Seeds are restored to their original OKLab positions (not inverse-lifted). Flat faces in working space become curved surfaces in OKLab that arc outward from the L axis (radial lift effect). Free particles retain their stretched L values from the hull geometry, spanning a wider lightness range than the seeds alone (L-stretch effect).
 
 ### 9.2 Final Gamut Check
 
@@ -578,8 +591,8 @@ Transform final OKLab positions to linear RGB, apply sRGB gamma. Output is a set
 | Adaptive gamma | γ | 1 + v · Δh_max / π | Chroma preservation, adapts to hue spread |
 | Vividness | v | 2 | Controls adaptive gamma sensitivity. 0 = no adaptation. |
 | Reference chroma | R | max(seed chromas) | Anchors the lift; set automatically |
-| Lightness spread | s | 1.2 | L-range expansion factor. 1 = none, 2 = double. |
-| Lightness centroid | L_c | mean(seed lightnesses) | Center of L-stretch; set automatically |
+| Lightness spread | s | 1.5 | L-range expansion factor. 1 = none. Range [1, 5]. |
+| Lightness centroid | L_c | median(seed lightnesses) | Center of L-stretch; set automatically |
 | Riesz exponent start | p_start | 2 | Initial exponent for smooth exploration |
 | Riesz exponent end | p_end | 6 | Final exponent emphasizing worst-case spacing |
 | Gamut penalty weight | κ | 0.1 | Strength of gamut boundary avoidance |
@@ -594,7 +607,7 @@ Transform final OKLab positions to linear RGB, apply sRGB gamma. Output is a set
 | Face area threshold | τ_face | 1e-8 | Minimum face area |
 | Max iterations | — | 2000 | Hard cap |
 
-User-facing parameters: **N** (palette size), optionally **v** (vividness, default 2), optionally **s** (spread, default 1.2). All others have robust defaults.
+User-facing parameters: **N** (palette size), optionally **v** (vividness, default 2), optionally **s** (spread, default 1.5). All others have robust defaults.
 
 ---
 
@@ -684,9 +697,9 @@ Measure: minimum pairwise ΔE in OKLab, distribution of pairwise distances, frac
 | γ parameter | User-specified, default 1 | Adaptive from hue spread, controlled by vividness |
 | vividness parameter | Overrides r_s | Controls adaptive γ coefficient (default 2) |
 | r_s | Optionally user-overridable | Always automatic |
-| Lightness range | Determined by seeds | Expandable via spread parameter (default 1.2) |
-| Working-space transform | Radial lift only | Unified space lift (radial + L-stretch) |
-| Transform module | `radial-lift.ts` | `space-lift.ts` |
+| Lightness range | Determined by seeds | Expandable via spread parameter (default 1.5) |
+| Working-space transform | Radial lift only | Radial lift (`space-lift.ts`) + L-stretch preprocessing (`facette.ts`) |
+| Transform module | `radial-lift.ts` | `space-lift.ts` (radial only) |
 
 ### 13.3 What Stayed the Same (V4.4 → V5.0 → V5.1)
 
@@ -784,9 +797,9 @@ All issues from Rounds 1–7 remain resolved. The V5 architecture does not regre
 
 At v = 0, γ = 1 always — exact regression to V5.0 default behavior. At v = 2 with narrow-hue seeds, γ ≈ 1 — no unnecessary distortion. At v = 2 with complementary seeds, γ = 3 — strong chroma preservation.
 
-#### 14.6 Lightness stretching via unified space lift
+#### 14.6 Lightness stretching as seed preprocessing
 
-**Status: New in V5.1.** An affine scaling of the L coordinate around the seed lightness centroid, controlled by the spread parameter s ∈ [1, 2] (default 1.2). Unified with the radial lift into a single SpaceLift module — consumers call `toLifted` / `fromLifted` and get both transforms in one pass. The radial and lightness components act on independent coordinates (a,b vs. L) and commute.
+**Status: New in V5.1.** An affine scaling of seed L values around the median seed lightness, controlled by the spread parameter s ∈ [1, 5] (default 1.5). Applied as a preprocessing step in the orchestrator before the radial lift — the SpaceLift module (`space-lift.ts`) is purely radial and does not touch L. The L-stretch and radial lift act on independent coordinates (L vs. a,b) and commute.
 
 At s = 1, identity transform — exact regression to V5.0. At s > 1, the hull expands in lightness, giving particles more room to separate by lightness. The gamut penalty and final clipping handle any out-of-range L values.
 

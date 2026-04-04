@@ -37,7 +37,7 @@ console.log(result.colors);
 ```ts
 const result = generatePalette(seeds, 8, {
   vividness: 2,    // 0–4, default 2. Controls adaptive chroma preservation.
-  spread: 1.5,     // 1–2, default 1.5. Lightness range expansion.
+  spread: 1.5,     // 1–5, default 1.5. Lightness range expansion.
 });
 ```
 
@@ -74,7 +74,7 @@ console.log(trace.geometry.kind);     // 'line' or 'hull'
 | `seeds` | `string[]` | Hex colors (e.g. `['#ff0000', '#0000ff']`). Minimum 2, must be distinct. |
 | `size` | `number` | Total palette size including seeds. Must be >= seed count. |
 | `options.vividness` | `number` | Adaptive gamma coefficient. Default `2`. Range `[0, 4]`. |
-| `options.spread` | `number` | Lightness range expansion. Default `1.5`. Range `[1, 2]`. |
+| `options.spread` | `number` | Lightness range expansion. Default `1.5`. Range `[1, 5]`. |
 
 **Returns** `PaletteResult`:
 
@@ -111,7 +111,7 @@ Same parameters as `generatePalette`. Returns a `PaletteStepper`:
 
 Facette treats palette generation as a physics simulation in a radially lifted OKLab color space:
 
-1. **L-stretch + Radial lift** — seed lightness values are expanded around their centroid (controlled by `spread`), then a convex radial chroma lift contracts the low-chroma region and anchors vivid seeds. γ adapts automatically to seed hue spread.
+1. **L-stretch + Radial lift** — seed lightness values are expanded around their median (controlled by `spread`), then a convex radial chroma lift contracts the low-chroma region and anchors vivid seeds. γ adapts automatically to seed hue spread.
 2. **Convex hull** — the hull of lifted seeds defines the palette's chromatic family
 3. **Particle repulsion** — free particles on the hull surface repel each other via Riesz energy until they reach maximum separation
 4. **Inverse lift** — final positions are mapped back to OKLab and clipped to sRGB

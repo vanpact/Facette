@@ -142,7 +142,7 @@ export interface OptimizationTrace {
 
 export interface PaletteOptions {
   vividness?: number;   // adaptive gamma coefficient v. Default 2. Range [0, 4].
-  spread?: number;      // lightness stretch factor. Default 1.2. Range [1, 2].
+  spread?: number;      // lightness stretch factor. Default 1.5. Range [1, 5].
 }
 
 export interface PaletteResult {

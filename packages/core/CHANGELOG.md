@@ -12,7 +12,7 @@ V5.1: Adaptive gamma and lightness stretching.
 ### Added
 
 - **Adaptive gamma** — γ is now computed automatically from seed hue spread: `γ = 1 + v × Δh_max / π`. Narrow-hue palettes get γ ≈ 1 (no distortion), wide-hue palettes get up to γ = 3 (strong chroma preservation). Controlled by the `vividness` parameter.
-- **Lightness stretching** — new `spread` parameter (range [1, 2], default 1.5) expands seed lightness around the centroid before hull construction, giving free particles access to a wider lightness range than the seeds alone.
+- **Lightness stretching** — new `spread` parameter (range [1, 5], default 1.5) expands seed lightness around the median before hull construction, giving free particles access to a wider lightness range than the seeds alone.
 - `adaptive-gamma.ts` — standalone pure function for hue-spread-based gamma computation
 - `space-lift.ts` — radial chroma lift with exact closed-form inverse (L-stretch is separate seed preprocessing in the orchestrator)
 - `SpaceTransform` interface — narrow transform interface for consumers (ISP)
