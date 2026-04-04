@@ -75,8 +75,8 @@ function validateInputs(
   }
 
   if (options?.spread !== undefined) {
-    if (options.spread < 1 || options.spread > 2) {
-      throw new Error('Spread must be between 1 and 2');
+    if (options.spread < 1 || options.spread > 5) {
+      throw new Error('Spread must be between 1 and 5');
     }
   }
 }
@@ -116,13 +116,23 @@ export function createPaletteStepper(
   const rs = computeRs(chromas);
   const R = Math.max(...chromas);
   const spread = options?.spread ?? 1.5;
-  const Lc = oklabSeeds.reduce((sum, s) => sum + s.L, 0) / oklabSeeds.length;
+  const sortedLs = oklabSeeds.map(s => s.L).sort((a, b) => a - b);
+  const n = sortedLs.length;
+  const Lc = n % 2 === 1
+    ? sortedLs[Math.floor(n / 2)]
+    : (sortedLs[n / 2 - 1] + sortedLs[n / 2]) / 2;
 
-  // 5. Create space lift
-  const lift = createSpaceLift({ rs, R, gamma, spread, Lc });
+  // 5. L-stretch: expand seed lightness around median (hull-shaping, not a space transform)
+  const stretchedSeeds = oklabSeeds.map(s => ({
+    ...s,
+    L: Lc + spread * (s.L - Lc),
+  }));
 
-  // 6. Transform seeds to working space
-  const workingSeeds = oklabSeeds.map(s => lift.toLifted(s));
+  // 6. Create space lift (radial only — L-stretch is preprocessing, not part of the transform)
+  const lift = createSpaceLift({ rs, R, gamma });
+
+  // 7. Transform stretched seeds to working space
+  const workingSeeds = stretchedSeeds.map(s => lift.toLifted(s));
 
   // 7. Detect dimensionality in working space
   const dimResult = detectDimensionality(workingSeeds);
@@ -219,9 +229,9 @@ export function createPaletteStepper(
     run() {
       const allFrames = [...this.frames()];
       const lastFrame = allFrames[allFrames.length - 1];
-      // Seeds get their original OKLab positions (the L-stretch is one-directional,
-      // so fromLifted would give stretched L values for seeds — restore originals).
-      // Free particles get fromLifted which preserves stretched L (intended).
+      // fromLifted is a true inverse (radial only). Seeds in working space have
+      // stretched L from preprocessing — fromLifted preserves that L (correct).
+      // Restore seed OKLab positions for exact hex output.
       const oklabPositions = lastFrame.particles.map((p, i) =>
         i < oklabSeeds.length ? oklabSeeds[i] : lift.fromLifted(p.position),
       );
@@ -234,6 +244,8 @@ export function createPaletteStepper(
         clippedIndices,
         liftConfig: lift.config,
         vividness: v,
+        spread,
+        Lc,
       };
     },
   };

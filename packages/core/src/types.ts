@@ -57,8 +57,6 @@ export interface SpaceLiftConfig {
   readonly rs: number;
   readonly R: number;
   readonly gamma: number;
-  readonly spread: number;
-  readonly Lc: number;
 }
 
 /** Full interface: transform + diagnostic metadata. Only the orchestrator needs this. */
@@ -136,6 +134,8 @@ export interface OptimizationTrace {
   clippedIndices: number[];
   liftConfig: SpaceLiftConfig;
   vividness: number;
+  spread: number;
+  Lc: number;
 }
 
 // === Public API Types ===

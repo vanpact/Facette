@@ -5,7 +5,7 @@ import { createGamutChecker } from './gamut-clipping';
 import type { Particle, Vec3 } from './types';
 
 describe('ForceComputer', () => {
-  const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
+  const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1 });
   const gamut = createGamutChecker();
   const fc = createForceComputer(lift, gamut);
 

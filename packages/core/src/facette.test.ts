@@ -67,8 +67,8 @@ describe('input validation', () => {
     expect(() => generatePalette(['#ff0000', '#00ff00'], 4, { spread: 0.5 })).toThrow('Spread');
   });
 
-  it('rejects spread > 2', () => {
-    expect(() => generatePalette(['#ff0000', '#00ff00'], 4, { spread: 3 })).toThrow('Spread');
+  it('rejects spread > 5', () => {
+    expect(() => generatePalette(['#ff0000', '#00ff00'], 4, { spread: 6 })).toThrow('Spread');
   });
 
   it('accepts spread at boundaries', () => {
@@ -121,16 +121,16 @@ describe('L-stretch integration', () => {
     expect(lightnessRange(resultNarrow.colors)).toBe(6);
   });
 
-  it('trace.liftConfig.spread reflects option', () => {
+  it('trace.spread reflects option', () => {
     const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4, { spread: 1.5 });
     const trace = stepper.run();
-    expect(trace.liftConfig.spread).toBe(1.5);
+    expect(trace.spread).toBe(1.5);
   });
 
   it('default spread is 1.5', () => {
     const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4);
     const trace = stepper.run();
-    expect(trace.liftConfig.spread).toBe(1.5);
+    expect(trace.spread).toBe(1.5);
   });
 });
 
@@ -158,8 +158,8 @@ describe('createPaletteStepper', () => {
     expect(trace.liftConfig.rs).toBeGreaterThan(0);
     expect(trace.liftConfig.R).toBeGreaterThan(0);
     expect(trace.liftConfig.gamma).toBeGreaterThanOrEqual(1);
-    expect(trace.liftConfig.spread).toBeGreaterThanOrEqual(1);
-    expect(trace.liftConfig.Lc).toBeGreaterThan(0);
+    expect(trace.spread).toBeGreaterThanOrEqual(1);
+    expect(trace.Lc).toBeGreaterThan(0);
   });
 
   it('frames() returns the same cached generator on repeated calls', () => {

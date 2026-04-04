@@ -64,7 +64,7 @@ describe('createAnnealingSchedule', () => {
 
 describe('createOptimizationStepper', () => {
   it('yields frames with correct structure', () => {
-    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
+    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1 });
     const gamut = createGamutChecker();
     const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
@@ -88,7 +88,7 @@ describe('createOptimizationStepper', () => {
   });
 
   it('pinned particles do not move', () => {
-    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
+    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1 });
     const gamut = createGamutChecker();
     const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
@@ -112,7 +112,7 @@ describe('createOptimizationStepper', () => {
   });
 
   it('final energy is lower than initial energy', () => {
-    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
+    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1 });
     const gamut = createGamutChecker();
     const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
