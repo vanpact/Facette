@@ -136,7 +136,8 @@ export function* createOptimizationStepper(
     const stepSize = schedule.getStepSize(iteration);
 
     // Compute forces and energy on current state
-    const { forces: forceVecs, energy } = forces.computeForcesAndEnergy(particles, p, kappa);
+    const beta = schedule.getMetricBlend(iteration);
+    const { forces: forceVecs, energy } = forces.computeForcesAndEnergy(particles, p, kappa, beta);
 
     // Project forces and find max force magnitude for normalization
     const projected: (Vec3 | null)[] = [];
