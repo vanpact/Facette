@@ -10,7 +10,7 @@ Perceptual color palette generation. Give it a few seed colors and a target size
 
 ## How it works
 
-Facette treats palette generation as a physics simulation: colors are particles on the convex hull of your seeds in a radially lifted OKLab space, repelling each other until they reach maximum separation. The lift contracts the low-chroma region so particles naturally avoid muddy grays, and its convexity guarantees chroma preservation on intermediate colors between vivid seeds.
+Facette treats palette generation as a physics simulation: colors are particles on the convex hull of your seeds in a radially lifted OKLab space, repelling each other until they reach maximum separation. The repulsion metric transitions from lifted-space distances to gamut-clipped OKLab distances during optimization, so the optimizer maximizes actual output distinguishability rather than a proxy. The lift contracts the low-chroma region so particles naturally avoid muddy grays, and its convexity guarantees chroma preservation on intermediate colors between vivid seeds.
 
 <p align="center">
   <img src="docs/assets/algorithm.svg" alt="Algorithm pipeline: Seeds → Lift → Hull → Optimize → Inverse Lift → Palette" width="800" />
@@ -136,10 +136,10 @@ Same parameters as `generatePalette`. Returns a `PaletteStepper`:
 3. **Detect dimensionality** — SVD on lifted seeds determines if they are collinear (1D), coplanar (2D), or full 3D
 4. **Build geometry** — convex hull (2D/3D) or line segment (1D) from lifted seeds. Faces are flat in lifted space, so areas are exact.
 5. **Initialize particles** — greedy placement weighted by exact face area in lifted space
-6. **Optimize** — plain Euclidean Riesz repulsion (exponent ramps from 2 to 6), constrained to the hull surface in lifted space. Gamut penalty via finite differences through the inverse lift.
+6. **Optimize** — Riesz repulsion with metric continuation: the distance metric transitions from lifted-space Euclidean to gamut-clipped OKLab via a β ramp (synchronized with the exponent ramp from 2 to 6), constrained to the hull surface in lifted space. Gamut penalty via finite differences through the inverse lift.
 7. **Output** — inverse-lift back to OKLab, gamut-clip, convert to sRGB hex
 
-The full algorithm specification is in [`Specs/Facette_algorithm_v5.1.md`](Specs/Facette_algorithm_v5.1.md).
+The full algorithm specification is in [`Specs/Facette_algorithm_v5.1.md`](Specs/Facette_algorithm_v5.1.md), with the clipped-OKLab repulsion amendment in [`Specs/Facette_algorithm_v5.2_amendment.md`](Specs/Facette_algorithm_v5.2_amendment.md).
 
 ## Architecture
 
@@ -161,7 +161,7 @@ Under the hood, this step uses [Singular Value Decomposition](https://en.wikiped
 
 **4. Initialize** — Free particles (the new colors to generate) are placed on the hull surface using a greedy strategy. The algorithm picks the face with the most available space, samples a grid of candidate positions on that face, and selects the point that is farthest from all existing particles. This gives the optimizer a strong starting position rather than random noise.
 
-**5. Optimize** — This is where the physics simulation happens. Every particle exerts a repulsive force on every other particle (like electrons on a sphere), pushing them apart until they reach maximum separation. The forces use [Riesz energy](https://en.wikipedia.org/wiki/Riesz_potential) with an exponent that gradually ramps from 2 to 6 — starting soft for global exploration and ending sharp to fine-tune local spacing. Meanwhile, a gamut penalty nudges particles away from colors that would fall outside the displayable sRGB range. An annealing schedule controls step sizes and convergence.
+**5. Optimize** — This is where the physics simulation happens. Every particle exerts a repulsive force on every other particle (like electrons on a sphere), pushing them apart until they reach maximum separation. The forces use [Riesz energy](https://en.wikipedia.org/wiki/Riesz_potential) with an exponent that gradually ramps from 2 to 6 — starting soft for global exploration and ending sharp to fine-tune local spacing. Simultaneously, a metric continuation (β ramp) transitions the distance metric from lifted-space Euclidean to gamut-clipped OKLab, so the optimizer increasingly optimizes actual output separation rather than a proxy. Meanwhile, a gamut penalty nudges particles away from colors that would fall outside the displayable sRGB range. An annealing schedule controls step sizes and convergence.
 
 Throughout optimization, every particle is constrained to the hull surface. When a force pushes a particle off the edge of a triangle face, the algorithm detects the crossing and seamlessly transitions it to the adjacent face.
 
@@ -187,7 +187,7 @@ The codebase follows a strict separation of concerns — each file owns exactly 
 | `seed-classification.ts` | Tags each seed as vertex / boundary / interior on the hull |
 | `initialization.ts` | Greedy area-weighted particle placement |
 | `optimization.ts` | Generator-based solver loop with annealing schedule |
-| `energy.ts` | Riesz repulsion + gamut penalty force computation |
+| `energy.ts` | Blended Riesz repulsion (lifted + clipped OKLab) + gamut penalty force computation |
 | `surface-navigation.ts` | Projects motion onto hull faces, handles edge crossings |
 | `line-segment.ts` | 1D constraint for the two-seed case |
 | `gamut-clipping.ts` | Binary-search chroma reduction to sRGB boundary |

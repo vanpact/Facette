@@ -5,9 +5,9 @@ All notable changes to the `facette` package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-04-04
+## [0.2.0] - 2026-04-10
 
-V5.1: Adaptive gamma and lightness stretching.
+V5.1 + V5.2: Adaptive gamma, lightness stretching, and clipped-OKLab repulsion energy.
 
 ### Added
 
@@ -18,6 +18,9 @@ V5.1: Adaptive gamma and lightness stretching.
 - `SpaceTransform` interface — narrow transform interface for consumers (ISP)
 - `SpaceLiftConfig` interface — grouped construction parameters for diagnostics/tracing
 - `SpaceLift` interface — full transform + config, extends `SpaceTransform`
+- **Clipped-OKLab repulsion energy** (V5.2) — repulsion metric transitions from lifted-space Euclidean distances to gamut-clipped OKLab distances via a β ramp synchronized with the Riesz exponent ramp. Particles at (θ, L) positions with low gamut headroom are repelled toward higher-headroom positions, improving distinguishability for vivid wide-hue palettes.
+- `finiteDifferenceGradient` — reusable FD gradient utility (DRY extraction)
+- `getMetricBlend` on `AnnealingSchedule` — β ramp 0→1 over `metricBlendEnd` iterations
 
 ### Changed
 
@@ -25,6 +28,8 @@ V5.1: Adaptive gamma and lightness stretching.
 - **`OptimizationTrace`** — `rs`, `gamma`, `R` replaced by `liftConfig: SpaceLiftConfig`, `vividness`, `spread`, `Lc`
 - **`PaletteOptions`** — `gamma` removed (computed internally), `spread` added
 - `energy.ts` depends on narrow `SpaceTransform` instead of full `RadialLift` (ISP)
+- **`ForceComputer.computeForcesAndEnergy`** — gains `beta` parameter for metric blending
+- **`energy.ts`** — decomposed into `liftedRepulsion`, `clippedRepulsion`, and thin compositor for SRP. Gamut penalty FD refactored to use shared `finiteDifferenceGradient`.
 
 ### Fixed
 
@@ -41,6 +46,7 @@ V5.1: Adaptive gamma and lightness stretching.
 
 - At `vividness: 0, spread: 1`: γ = 1, L-stretch is identity — identical to V5.0 default behavior
 - At `vividness: 2, spread: 1` with narrow-hue seeds: γ ≈ 1 — near-identical to V5.0
+- At `beta: 0` throughout (or any in-gamut seed configuration): clipped energy = lifted energy — identical to V5.1
 
 ## [0.1.1] - 2026-03-27
 

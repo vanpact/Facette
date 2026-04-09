@@ -158,7 +158,7 @@
     </g>
 
     <!-- Details -->
-    <text x="200" y="133" text-anchor="middle" fill="#c9d1d9" font-size="10">Riesz repulsion (exponent 2 → 6) + gamut penalty, constrained to hull surface</text>
+    <text x="200" y="133" text-anchor="middle" fill="#c9d1d9" font-size="10">Riesz repulsion (lifted → clipped OKLab, exponent 2 → 6) + gamut penalty, constrained to hull surface</text>
     <text x="200" y="147" text-anchor="middle" fill="#8b949e" font-size="9">annealing schedule with adaptive convergence</text>
   </g>
 

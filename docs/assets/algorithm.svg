@@ -108,7 +108,7 @@
     <circle cx="70" cy="55" r="3.5" fill="#a77c68"/>
     <circle cx="58" cy="78" r="3.5" fill="#3b698d"/>
     <circle cx="40" cy="75" r="3.5" fill="#8e616e"/>
-    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">Euclidean repulsion</text>
+    <text x="55" y="122" fill="#484f58" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle">blended repulsion</text>
   </g>
 
   <!-- Arrow 4 -->

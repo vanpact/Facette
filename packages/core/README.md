@@ -113,7 +113,7 @@ Facette treats palette generation as a physics simulation in a radially lifted O
 
 1. **L-stretch + Radial lift** — seed lightness values are expanded around their median (controlled by `spread`), then a convex radial chroma lift contracts the low-chroma region and anchors vivid seeds. γ adapts automatically to seed hue spread.
 2. **Convex hull** — the hull of lifted seeds defines the palette's chromatic family
-3. **Particle repulsion** — free particles on the hull surface repel each other via Riesz energy until they reach maximum separation
+3. **Particle repulsion** — free particles on the hull surface repel each other via Riesz energy, with the distance metric transitioning from lifted-space to gamut-clipped OKLab distances for gamut-aware separation
 4. **Inverse lift** — final positions are mapped back to OKLab and clipped to sRGB
 
 The algorithm handles everything automatically: 2 seeds produce a gradient, 3+ seeds define a surface, and the convex hull geometry adapts to any configuration.
