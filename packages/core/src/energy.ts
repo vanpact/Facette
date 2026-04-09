@@ -39,6 +39,33 @@ export function finiteDifferenceGradient(
 }
 
 /**
+ * Compute Riesz repulsion energy and analytical gradients from pairwise
+ * distances in lifted (working) space.
+ */
+function liftedRepulsion(
+  vecs: Vec3[],
+  p: number,
+): { energy: number; gradients: Vec3[] } {
+  const n = vecs.length;
+  const gradients: Vec3[] = Array.from({ length: n }, () => [0, 0, 0] as Vec3);
+  let energy = 0;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const diff: Vec3 = vec3Sub(vecs[i], vecs[j]);
+      const rawDist = vec3Norm(diff);
+      const dij = Math.max(rawDist, 1e-10);
+      energy += Math.pow(dij, -p);
+      const coeff = p * Math.pow(dij, -(p + 2));
+      gradients[i] = vec3Add(gradients[i], vec3Scale(diff, -coeff));
+      gradients[j] = vec3Add(gradients[j], vec3Scale(diff, coeff));
+    }
+  }
+
+  return { energy, gradients };
+}
+
+/**
  * Creates a ForceComputer that computes plain Euclidean Riesz repulsion
  * in lifted space, with gamut penalty gradient via finite differences
  * through the inverse lift.
@@ -56,20 +83,7 @@ export function createForceComputer(
       const n = particles.length;
       const vecs: Vec3[] = particles.map(pt => oklabToVec3(pt.position));
 
-      const gradRep: Vec3[] = Array.from({ length: n }, () => [0, 0, 0] as Vec3);
-      let eRep = 0;
-
-      for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-          const diff: Vec3 = vec3Sub(vecs[i], vecs[j]);
-          const rawDist = vec3Norm(diff);
-          const dij = Math.max(rawDist, 1e-10);
-          eRep += Math.pow(dij, -p);
-          const coeff = p * Math.pow(dij, -(p + 2));
-          gradRep[i] = vec3Add(gradRep[i], vec3Scale(diff, -coeff));
-          gradRep[j] = vec3Add(gradRep[j], vec3Scale(diff, coeff));
-        }
-      }
+      const { energy: eRep, gradients: gradRep } = liftedRepulsion(vecs, p);
 
       const forces: Vec3[] = [];
       let eGamut = 0;
