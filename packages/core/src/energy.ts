@@ -66,36 +66,112 @@ function liftedRepulsion(
 }
 
 /**
- * Creates a ForceComputer that computes plain Euclidean Riesz repulsion
- * in lifted space, with gamut penalty gradient via finite differences
- * through the inverse lift.
+ * Compute Riesz repulsion energy and FD gradients from pairwise distances
+ * of gamut-clipped OKLab positions.
+ */
+function clippedRepulsion(
+  particles: readonly Particle[],
+  clippedVecs: Vec3[],
+  toClipped: (pos: OKLab) => OKLab,
+  p: number,
+  eps: number,
+): { energy: number; gradients: Vec3[] } {
+  const n = particles.length;
+  const gradients: Vec3[] = Array.from({ length: n }, () => [0, 0, 0] as Vec3);
+
+  // Compute base clipped energy
+  let energy = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const diff = vec3Sub(clippedVecs[i], clippedVecs[j]);
+      const dij = Math.max(vec3Norm(diff), 1e-10);
+      energy += Math.pow(dij, -p);
+    }
+  }
+
+  // FD gradient: perturb each particle's working-space position
+  for (let i = 0; i < n; i++) {
+    const pos = particles[i].position;
+    gradients[i] = finiteDifferenceGradient(
+      pos,
+      (perturbed: OKLab) => {
+        const perturbedClipped = oklabToVec3(toClipped(perturbed));
+        let e = 0;
+        for (let j = 0; j < n; j++) {
+          if (j === i) continue;
+          const diff = vec3Sub(perturbedClipped, clippedVecs[j]);
+          const dij = Math.max(vec3Norm(diff), 1e-10);
+          e += Math.pow(dij, -p);
+        }
+        return e;
+      },
+      eps,
+    );
+  }
+
+  return { energy, gradients };
+}
+
+/**
+ * Creates a ForceComputer that blends lifted-space and clipped-OKLab Riesz
+ * repulsion via the β parameter, with gamut penalty gradient via finite
+ * differences through the inverse lift.
+ *
+ * - β = 0: pure lifted-space repulsion (V5.1 behavior)
+ * - β = 1: pure clipped-OKLab repulsion (V5.2)
+ * - 0 < β < 1: linear blend of both energies and gradients
  */
 export function createForceComputer(
   lift: SpaceTransform,
   gamut: GamutChecker,
 ): ForceComputer {
+  const toClipped = (pos: OKLab): OKLab => gamut.clipPreserveChroma(lift.fromLifted(pos));
+
   return {
     computeForcesAndEnergy(
       particles: readonly Particle[],
       p: number,
       kappa: number,
+      beta: number,
     ): { forces: Vec3[]; energy: number } {
       const n = particles.length;
       const vecs: Vec3[] = particles.map(pt => oklabToVec3(pt.position));
 
-      const { energy: eRep, gradients: gradRep } = liftedRepulsion(vecs, p);
+      // Lifted repulsion (skip if β = 1)
+      const lifted = beta < 1
+        ? liftedRepulsion(vecs, p)
+        : { energy: 0, gradients: Array.from({ length: n }, () => [0, 0, 0] as Vec3) };
+
+      // Clipped repulsion (skip if β = 0)
+      let clipped: { energy: number; gradients: Vec3[] };
+      if (beta > 0) {
+        const clippedVecs = particles.map(pt => oklabToVec3(toClipped(pt.position)));
+        clipped = clippedRepulsion(particles, clippedVecs, toClipped, p, FD_EPS);
+      } else {
+        clipped = { energy: 0, gradients: Array.from({ length: n }, () => [0, 0, 0] as Vec3) };
+      }
+
+      // Blend repulsion energy and gradients
+      const oneMinusBeta = 1 - beta;
+      const eRep = oneMinusBeta * lifted.energy + beta * clipped.energy;
 
       const forces: Vec3[] = [];
       let eGamut = 0;
 
       for (let i = 0; i < n; i++) {
+        // Blended repulsion gradient
+        const repGrad: Vec3 = vec3Add(
+          vec3Scale(lifted.gradients[i], oneMinusBeta),
+          vec3Scale(clipped.gradients[i], beta),
+        );
+
+        // Gamut penalty
         const pos = particles[i].position;
         const oklabPos = lift.fromLifted(pos);
         const penalty = gamutPenaltyEnergy(oklabPos);
         eGamut += penalty;
 
         let gamutGrad: Vec3 = [0, 0, 0];
-
         if (penalty > 0) {
           gamutGrad = finiteDifferenceGradient(
             pos,
@@ -104,7 +180,7 @@ export function createForceComputer(
           );
         }
 
-        const totalGrad = vec3Add(gradRep[i], vec3Scale(gamutGrad, kappa));
+        const totalGrad = vec3Add(repGrad, vec3Scale(gamutGrad, kappa));
         forces.push(vec3Scale(totalGrad, -1));
       }
 
