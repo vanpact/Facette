@@ -175,7 +175,7 @@ export function createForceComputer(
         if (penalty > 0) {
           gamutGrad = finiteDifferenceGradient(
             pos,
-            p => gamutPenaltyEnergy(lift.fromLifted(p)),
+            pos => gamutPenaltyEnergy(lift.fromLifted(pos)),
             FD_EPS,
           );
         }

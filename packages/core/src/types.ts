@@ -66,9 +66,9 @@ export interface SpaceLift extends SpaceTransform {
 
 /**
  * ForceComputer is constructed with SpaceTransform and GamutChecker
- * injected (DIP). Only per-iteration parameters (p, kappa) are
+ * injected (DIP). Per-iteration parameters (p, kappa, beta) are
  * passed at call time since they change via annealing.
- * Returns forces AND scalar energy in one pass (shared pairwise distances).
+ * Returns forces AND scalar energy in one pass.
  */
 export interface ForceComputer {
   computeForcesAndEnergy(

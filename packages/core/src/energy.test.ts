@@ -95,14 +95,24 @@ describe('ForceComputer', () => {
     expect(diff).toBeGreaterThan(0.01);
   });
 
-  it('beta=0 produces identical energy to V5.1 lifted repulsion', () => {
+  it('beta=0 ignores clipping even when clip would change positions', () => {
+    // With vivid lift (gamma=3), clip changes positions significantly.
+    // At beta=0, clipped repulsion is skipped — energy depends only on
+    // lifted-space distances. Verify by checking that energy is invariant
+    // to whether the GamutChecker would clip differently.
+    const vividLift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 3 });
+    const vividFc = createForceComputer(vividLift, gamut);
     const particles: Particle[] = [
-      { kind: 'free', position: { L: 0.4, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
-      { kind: 'free', position: { L: 0.6, a: -0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: vividLift.toLifted({ L: 0.5, a: 0.25, b: 0 }), faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: vividLift.toLifted({ L: 0.5, a: -0.25, b: 0 }), faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
     ];
-    const result = fc.computeForcesAndEnergy(particles, 2, 0, 0);
-    expect(result.energy).toBeGreaterThan(0);
-    expect(result.forces.length).toBe(2);
+    // At beta=0, energy should equal pure lifted-space Riesz: d^(-p) for the pair
+    const r = vividFc.computeForcesAndEnergy(particles, 4, 0, 0);
+    const pos0 = particles[0].position;
+    const pos1 = particles[1].position;
+    const dL = pos0.L - pos1.L, da = pos0.a - pos1.a, db = pos0.b - pos1.b;
+    const dist = Math.sqrt(dL * dL + da * da + db * db);
+    expect(r.energy).toBeCloseTo(Math.pow(dist, -4), 8);
   });
 
   it('beta=1 produces different energy than beta=0 for out-of-gamut particles', () => {
