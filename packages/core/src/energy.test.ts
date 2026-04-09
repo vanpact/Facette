@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { createForceComputer } from './energy';
+import { createForceComputer, finiteDifferenceGradient } from './energy';
 import { createSpaceLift } from './space-lift';
 import { createGamutChecker } from './gamut-clipping';
-import type { Particle, Vec3 } from './types';
+import type { Particle, Vec3, OKLab } from './types';
 
 describe('ForceComputer', () => {
   const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1 });
@@ -93,5 +93,28 @@ describe('ForceComputer', () => {
       (withGamut.forces[0][2] - withoutGamut.forces[0][2])**2,
     );
     expect(diff).toBeGreaterThan(0.01);
+  });
+});
+
+describe('finiteDifferenceGradient', () => {
+  it('computes gradient of a quadratic energy', () => {
+    // E(pos) = pos.L^2 + pos.a^2 + pos.b^2
+    // grad = [2L, 2a, 2b]
+    const energyFn = (pos: OKLab) => pos.L * pos.L + pos.a * pos.a + pos.b * pos.b;
+    const pos: OKLab = { L: 0.5, a: 0.1, b: -0.2 };
+    const grad = finiteDifferenceGradient(pos, energyFn, 1e-7);
+    expect(grad[0]).toBeCloseTo(2 * 0.5, 4);   // dE/dL = 1.0
+    expect(grad[1]).toBeCloseTo(2 * 0.1, 4);   // dE/da = 0.2
+    expect(grad[2]).toBeCloseTo(2 * -0.2, 4);  // dE/db = -0.4
+  });
+
+  it('returns zero gradient at energy minimum', () => {
+    // E(pos) = (L - 0.5)^2, minimum at L=0.5
+    const energyFn = (pos: OKLab) => (pos.L - 0.5) ** 2;
+    const pos: OKLab = { L: 0.5, a: 0, b: 0 };
+    const grad = finiteDifferenceGradient(pos, energyFn, 1e-7);
+    expect(Math.abs(grad[0])).toBeLessThan(1e-5);
+    expect(Math.abs(grad[1])).toBeLessThan(1e-5);
+    expect(Math.abs(grad[2])).toBeLessThan(1e-5);
   });
 });

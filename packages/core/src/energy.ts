@@ -23,6 +23,22 @@ function gamutPenaltyEnergy(pos: OKLab): number {
 const FD_EPS = 1e-7;
 
 /**
+ * Compute the gradient of a scalar energy function at a working-space position
+ * via forward finite differences. Perturbs each coordinate (L, a, b) by eps.
+ */
+export function finiteDifferenceGradient(
+  pos: OKLab,
+  energyFn: (p: OKLab) => number,
+  eps: number,
+): Vec3 {
+  const base = energyFn(pos);
+  const gL = (energyFn({ L: pos.L + eps, a: pos.a, b: pos.b }) - base) / eps;
+  const ga = (energyFn({ L: pos.L, a: pos.a + eps, b: pos.b }) - base) / eps;
+  const gb = (energyFn({ L: pos.L, a: pos.a, b: pos.b + eps }) - base) / eps;
+  return [gL, ga, gb];
+}
+
+/**
  * Creates a ForceComputer that computes plain Euclidean Riesz repulsion
  * in lifted space, with gamut penalty gradient via finite differences
  * through the inverse lift.
@@ -67,10 +83,11 @@ export function createForceComputer(
         let gamutGrad: Vec3 = [0, 0, 0];
 
         if (penalty > 0) {
-          const gL = (gamutPenaltyEnergy(lift.fromLifted({ L: pos.L + FD_EPS, a: pos.a, b: pos.b })) - penalty) / FD_EPS;
-          const ga = (gamutPenaltyEnergy(lift.fromLifted({ L: pos.L, a: pos.a + FD_EPS, b: pos.b })) - penalty) / FD_EPS;
-          const gb = (gamutPenaltyEnergy(lift.fromLifted({ L: pos.L, a: pos.a, b: pos.b + FD_EPS })) - penalty) / FD_EPS;
-          gamutGrad = [gL, ga, gb];
+          gamutGrad = finiteDifferenceGradient(
+            pos,
+            p => gamutPenaltyEnergy(lift.fromLifted(p)),
+            FD_EPS,
+          );
         }
 
         const totalGrad = vec3Add(gradRep[i], vec3Scale(gamutGrad, kappa));
