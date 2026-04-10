@@ -6,6 +6,7 @@ export interface ViewerSlice {
   showHull: boolean;
   showGamut: boolean;
   showAxes: boolean;
+  showClipping: boolean;
   morphT: number;
 
   toggleSeeds: () => void;
@@ -13,6 +14,7 @@ export interface ViewerSlice {
   toggleHull: () => void;
   toggleGamut: () => void;
   toggleAxes: () => void;
+  toggleClipping: () => void;
   setMorphT: (t: number) => void;
 }
 
@@ -22,6 +24,7 @@ export const createViewerSlice: StateCreator<ViewerSlice, [], [], ViewerSlice> =
   showHull: true,
   showGamut: false,
   showAxes: true,
+  showClipping: false,
   morphT: 0,
 
   toggleSeeds: () => set((s) => ({ showSeeds: !s.showSeeds })),
@@ -29,5 +32,6 @@ export const createViewerSlice: StateCreator<ViewerSlice, [], [], ViewerSlice> =
   toggleHull: () => set((s) => ({ showHull: !s.showHull })),
   toggleGamut: () => set((s) => ({ showGamut: !s.showGamut })),
   toggleAxes: () => set((s) => ({ showAxes: !s.showAxes })),
+  toggleClipping: () => set((s) => ({ showClipping: !s.showClipping })),
   setMorphT: (t) => set({ morphT: t }),
 });
