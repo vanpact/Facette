@@ -64,4 +64,38 @@ describe('finalizeColors', () => {
     expect(clippedIndices).not.toContain(0);
     expect(clippedIndices).not.toContain(2);
   });
+
+  it('returns clippedPositions with same length as input', () => {
+    const positions: OKLab[] = [
+      { L: 0.5, a: 0, b: 0 },
+      { L: 0.7, a: 0.05, b: 0 },
+    ];
+    const { clippedPositions } = finalizeColors(positions, gamut);
+    expect(clippedPositions).toHaveLength(2);
+  });
+
+  it('clippedPositions identity for in-gamut points', () => {
+    const positions: OKLab[] = [
+      { L: 0.5, a: 0, b: 0 },
+    ];
+    const { clippedPositions } = finalizeColors(positions, gamut);
+    expect(clippedPositions[0]).toEqual(positions[0]);
+  });
+
+  it('clippedPositions differ for out-of-gamut points', () => {
+    const positions: OKLab[] = [
+      { L: 0.5, a: 0.4, b: 0.4 },
+    ];
+    const { clippedPositions, clippedIndices } = finalizeColors(positions, gamut);
+    expect(clippedIndices).toContain(0);
+    // Clipped position must differ from original
+    const cp = clippedPositions[0];
+    const op = positions[0];
+    const moved = cp.L !== op.L || cp.a !== op.a || cp.b !== op.b;
+    expect(moved).toBe(true);
+    // Clipped chroma must be less than original
+    const origChroma = Math.sqrt(op.a * op.a + op.b * op.b);
+    const clipChroma = Math.sqrt(cp.a * cp.a + cp.b * cp.b);
+    expect(clipChroma).toBeLessThan(origChroma);
+  });
 });
