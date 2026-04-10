@@ -125,6 +125,7 @@ export function* createOptimizationStepper(
   forces: ForceComputer,
   constraint: MotionConstraint,
   inverseLift: (pos: OKLab) => OKLab,
+  toMetricPosition: (particle: Particle, index: number) => OKLab,
   schedule: AnnealingSchedule,
 ): Generator<OptimizationFrame> {
   let particles = cloneParticles(initialParticles);
@@ -164,9 +165,10 @@ export function* createOptimizationStepper(
       }
     }
 
-    // Compute OKLab positions on current state (consistent with energy)
+    // Compute display-space and metric-space positions on current state.
     const oklabPositions = particles.map(pt => inverseLift(pt.position));
-    const minDeltaE = pairwiseMinDeltaE(oklabPositions);
+    const metricPositions = particles.map((pt, index) => toMetricPosition(pt, index));
+    const minDeltaE = pairwiseMinDeltaE(metricPositions);
 
     // Yield frame — particles and energy are from the same state
     yield {

@@ -93,7 +93,14 @@ describe('createOptimizationStepper', () => {
       { kind: 'pinned-endpoint', position: line.end, t: 1 },
     ];
 
-    const gen = createOptimizationStepper(particles, forces, constraint, lift.fromLifted, schedule);
+    const gen = createOptimizationStepper(
+      particles,
+      forces,
+      constraint,
+      lift.fromLifted,
+      particle => lift.fromLifted(particle.position),
+      schedule,
+    );
     const first = gen.next();
     expect(first.done).toBe(false);
     expect(first.value.iteration).toBe(0);
@@ -117,7 +124,14 @@ describe('createOptimizationStepper', () => {
       { kind: 'pinned-endpoint', position: { ...line.end }, t: 1 },
     ];
 
-    const gen = createOptimizationStepper(particles, forces, constraint, lift.fromLifted, schedule);
+    const gen = createOptimizationStepper(
+      particles,
+      forces,
+      constraint,
+      lift.fromLifted,
+      particle => lift.fromLifted(particle.position),
+      schedule,
+    );
     let lastFrame;
     for (const frame of gen) {
       lastFrame = frame;
@@ -142,7 +156,14 @@ describe('createOptimizationStepper', () => {
       { kind: 'pinned-endpoint', position: line.end, t: 1 },
     ];
 
-    const gen = createOptimizationStepper(particles, forces, constraint, lift.fromLifted, schedule);
+    const gen = createOptimizationStepper(
+      particles,
+      forces,
+      constraint,
+      lift.fromLifted,
+      particle => lift.fromLifted(particle.position),
+      schedule,
+    );
     let firstEnergy: number | null = null;
     let lastEnergy = 0;
     for (const frame of gen) {
