@@ -21,6 +21,7 @@ export function OKLabViewer({ controlsRef }: OKLabViewerProps) {
   const showGamut = useStore((s) => s.showGamut);
   const showAxes = useStore((s) => s.showAxes);
   const { isWarped, toggle } = useMorphToggle();
+  const showClipping = useStore((s) => s.showClipping);
   const morphData = useMorphInterpolation();
 
   const posMapper = (pos: OKLab): [number, number, number] => oklabToScene(pos);
@@ -52,6 +53,7 @@ export function OKLabViewer({ controlsRef }: OKLabViewerProps) {
             positions={morphData.interpolatedPositions}
             positionMapper={posMapper}
             colors={trace?.finalColors ?? []}
+            clippedIndices={showClipping && trace ? new Set(trace.clippedIndices) : null}
           />
         )}
       </SceneSetup>

@@ -16,6 +16,7 @@ interface OKLChViewerProps {
 export function OKLChViewer({ controlsRef }: OKLChViewerProps) {
   const trace = useStore((s) => s.trace);
   const showAxes = useStore((s) => s.showAxes);
+  const showClipping = useStore((s) => s.showClipping);
   const morphData = useMorphInterpolation();
 
   const posMapper = (pos: OKLab): [number, number, number] =>
@@ -34,6 +35,7 @@ export function OKLChViewer({ controlsRef }: OKLChViewerProps) {
             positions={morphData.interpolatedPositions}
             positionMapper={posMapper}
             colors={trace?.finalColors ?? []}
+            clippedIndices={showClipping && trace ? new Set(trace.clippedIndices) : null}
           />
         )}
       </SceneSetup>
