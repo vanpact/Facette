@@ -1,16 +1,19 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import gamutData from '../../../assets/srgb-gamut.json';
+import { useGLTF } from '@react-three/drei';
+import gamutUrl from '../../../assets/srgb-gamut.glb?url';
 
 export function GamutBoundary() {
+  const { nodes } = useGLTF(gamutUrl);
+
   const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    const verts = new Float32Array(gamutData.vertices);
-    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-    geo.setIndex(gamutData.indices);
-    geo.computeVertexNormals();
-    return geo;
-  }, []);
+    const mesh = Object.values(nodes).find(
+      (n): n is THREE.Mesh => n instanceof THREE.Mesh,
+    );
+    return mesh?.geometry ?? null;
+  }, [nodes]);
+
+  if (!geometry) return null;
 
   return (
     <mesh geometry={geometry}>
