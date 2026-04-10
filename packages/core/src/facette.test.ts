@@ -187,6 +187,18 @@ describe('createPaletteStepper', () => {
     expect(trace.Lc).toBeGreaterThan(0);
   });
 
+  it('run() returns clippedPositions with same length as finalColors', () => {
+    const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4);
+    const trace = stepper.run();
+    expect(trace.clippedPositions).toHaveLength(trace.finalColors.length);
+    // Each clipped position must be a valid OKLab
+    for (const pos of trace.clippedPositions) {
+      expect(pos).toHaveProperty('L');
+      expect(pos).toHaveProperty('a');
+      expect(pos).toHaveProperty('b');
+    }
+  });
+
   it('frames() returns the same cached generator on repeated calls', () => {
     const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4);
     const gen1 = stepper.frames();

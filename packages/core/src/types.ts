@@ -134,6 +134,7 @@ export interface OptimizationTrace {
   frames: OptimizationFrame[];
   finalColors: string[];
   clippedIndices: number[];
+  clippedPositions: OKLab[];
   liftConfig: SpaceLiftConfig;
   vividness: number;
   spread: number;

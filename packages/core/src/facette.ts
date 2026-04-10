@@ -260,13 +260,14 @@ export function createPaletteStepper(
       const oklabPositions = lastFrame.particles.map((p, i) =>
         i < oklabSeeds.length ? oklabSeeds[i] : lift.fromLifted(p.position),
       );
-      const { colors, clippedIndices } = finalizeColors(oklabPositions, gamut);
+      const { colors, clippedIndices, clippedPositions } = finalizeColors(oklabPositions, gamut);
       cachedTrace = {
         geometry: displayGeometry,
         seeds: displaySeeds,
         frames: observedFrames.slice(),
         finalColors: colors,
         clippedIndices,
+        clippedPositions,
         liftConfig: lift.config,
         vividness: v,
         spread,
