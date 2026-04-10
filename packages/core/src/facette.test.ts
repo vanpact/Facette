@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { generatePalette, createPaletteStepper } from './facette';
+import { hexToOklab } from './color-conversion';
+
+function minDeltaE(colors: string[]): number {
+  let min = Infinity;
+  for (let i = 0; i < colors.length; i++) {
+    const a = hexToOklab(colors[i]);
+    for (let j = i + 1; j < colors.length; j++) {
+      const b = hexToOklab(colors[j]);
+      const d = Math.hypot(a.L - b.L, a.a - b.a, a.b - b.b);
+      if (d < min) min = d;
+    }
+  }
+  return min;
+}
 
 describe('generatePalette', () => {
   it('returns correct number of colors', () => {
@@ -30,6 +44,17 @@ describe('generatePalette', () => {
   it('metadata includes iteration count', () => {
     const result = generatePalette(['#ff0000', '#0000ff'], 4);
     expect(result.metadata.iterations).toBeGreaterThan(0);
+  });
+
+  it('metadata minDeltaE stays aligned with final output colors', () => {
+    const result = generatePalette(['#ff0000', '#00ffff'], 7);
+    expect(result.metadata.minDeltaE).toBeCloseTo(minDeltaE(result.colors), 2);
+  });
+
+  it('seed-only palettes do not report spurious clipping', () => {
+    const result = generatePalette(['#ff0000', '#00ff00', '#0000ff'], 3);
+    expect(result.colors).toEqual(['#ff0000', '#00ff00', '#0000ff']);
+    expect(result.metadata.clippedCount).toBe(0);
   });
 });
 
@@ -167,6 +192,25 @@ describe('createPaletteStepper', () => {
     const gen1 = stepper.frames();
     const gen2 = stepper.frames();
     expect(gen1).toBe(gen2);
+  });
+
+  it('run() preserves frames already consumed through frames()', () => {
+    const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4);
+    const gen = stepper.frames();
+    expect(gen.next().value.iteration).toBe(0);
+
+    const trace = stepper.run();
+    expect(trace.frames[0].iteration).toBe(0);
+    expect(trace.frames.length).toBeGreaterThan(1);
+  });
+
+  it('run() is idempotent after the optimization completes', () => {
+    const stepper = createPaletteStepper(['#ff0000', '#0000ff'], 4);
+    const traceA = stepper.run();
+    const traceB = stepper.run();
+
+    expect(traceB.frames.length).toBe(traceA.frames.length);
+    expect(traceB.finalColors).toEqual(traceA.finalColors);
   });
 
   it('2-seed case produces LineGeometry', () => {

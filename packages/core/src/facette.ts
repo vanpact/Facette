@@ -211,24 +211,49 @@ export function createPaletteStepper(
   })) as Particle[];
 
   // 9. Create stepper
-  const stepper = createOptimizationStepper(
-    particles, forces, constraint, lift.fromLifted, schedule,
+  const optimizationStepper = createOptimizationStepper(
+    particles, forces, constraint, lift.fromLifted,
+    (particle, index) => gamut.clipPreserveChroma(
+      index < oklabSeeds.length ? oklabSeeds[index] : lift.fromLifted(particle.position),
+    ),
+    schedule,
   );
 
+  const observedFrames: OptimizationFrame[] = [];
   let cachedGenerator: Generator<OptimizationFrame> | null = null;
+  let cachedTrace: OptimizationTrace | null = null;
+
+  function* frames(): Generator<OptimizationFrame> {
+    for (const frame of optimizationStepper) {
+      observedFrames.push(frame);
+      yield frame;
+    }
+  }
 
   return {
     geometry: displayGeometry,
     seeds: displaySeeds,
     frames() {
       if (cachedGenerator === null) {
-        cachedGenerator = stepper;
+        cachedGenerator = frames();
       }
       return cachedGenerator;
     },
     run() {
-      const allFrames = [...this.frames()];
-      const lastFrame = allFrames[allFrames.length - 1];
+      if (cachedTrace !== null) {
+        return cachedTrace;
+      }
+
+      const generator = this.frames();
+      for (let next = generator.next(); !next.done; next = generator.next()) {
+        // Drain the generator. yielded frames are recorded in observedFrames.
+      }
+
+      const lastFrame = observedFrames[observedFrames.length - 1];
+      if (lastFrame === undefined) {
+        throw new Error('Optimization produced no frames');
+      }
+
       // fromLifted is a true inverse (radial only). Seeds in working space have
       // stretched L from preprocessing — fromLifted preserves that L (correct).
       // Restore seed OKLab positions for exact hex output.
@@ -236,10 +261,10 @@ export function createPaletteStepper(
         i < oklabSeeds.length ? oklabSeeds[i] : lift.fromLifted(p.position),
       );
       const { colors, clippedIndices } = finalizeColors(oklabPositions, gamut);
-      return {
+      cachedTrace = {
         geometry: displayGeometry,
         seeds: displaySeeds,
-        frames: allFrames,
+        frames: observedFrames.slice(),
         finalColors: colors,
         clippedIndices,
         liftConfig: lift.config,
@@ -247,6 +272,7 @@ export function createPaletteStepper(
         spread,
         Lc,
       };
+      return cachedTrace;
     },
   };
 }
