@@ -5,7 +5,7 @@ import {
   oklchToOklab,
 } from './color-conversion';
 
-const GAMUT_TOLERANCE = 1e-10;
+const GAMUT_TOLERANCE = 2e-7;
 const BINARY_SEARCH_ITERATIONS = 20;
 
 /**

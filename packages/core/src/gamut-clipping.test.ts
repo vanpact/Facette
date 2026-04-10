@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createGamutChecker } from './gamut-clipping';
+import { hexToOklab } from './color-conversion';
 
 describe('GamutChecker', () => {
   const checker = createGamutChecker();
@@ -16,6 +17,12 @@ describe('GamutChecker', () => {
     });
     it('returns false for extreme chroma', () => {
       expect(checker.isInGamut({ L: 0.5, a: 0.4, b: 0.4 })).toBe(false);
+    });
+
+    it('treats round-tripped sRGB primaries as in gamut', () => {
+      expect(checker.isInGamut(hexToOklab('#ff0000'))).toBe(true);
+      expect(checker.isInGamut(hexToOklab('#00ff00'))).toBe(true);
+      expect(checker.isInGamut(hexToOklab('#0000ff'))).toBe(true);
     });
   });
 
