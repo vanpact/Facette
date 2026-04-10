@@ -23,7 +23,8 @@ export function useMorphInterpolation(): {
     if (!trace || currentFrame >= trace.frames.length) return null;
     const frame = trace.frames[currentFrame];
 
-    if (showClipping && morphT === 0) {
+    const isLastFrame = currentFrame === trace.frames.length - 1;
+    if (showClipping && morphT === 0 && isLastFrame) {
       return { particles: frame.particles, interpolatedPositions: trace.clippedPositions };
     }
 

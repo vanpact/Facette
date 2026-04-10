@@ -33,7 +33,7 @@ export function PointInfoPanel() {
   // Clipped data is only available on the last frame
   const isLastFrame = currentFrame === trace.frames.length - 1;
   const hasClippedData = isLastFrame && trace.clippedPositions.length > selectedIndex;
-  const isClipped = hasClippedData && trace.clippedIndices.includes(selectedIndex);
+  const isClipped = hasClippedData && new Set(trace.clippedIndices).has(selectedIndex);
   const clippedOklab = hasClippedData ? trace.clippedPositions[selectedIndex] : null;
   const clippedLch = clippedOklab ? oklabToOklch(clippedOklab) : null;
   const clippedHex = clippedOklab ? oklabToHex(clippedOklab) : null;

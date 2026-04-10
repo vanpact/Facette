@@ -7,6 +7,7 @@ import { ParticlePoints } from './shared/ParticlePoints';
 import { HullMesh } from './shared/HullMesh';
 import { GamutBoundary } from './shared/GamutBoundary';
 import { oklabToScene } from './transforms/oklabToScene';
+import { useMemo } from 'react';
 import type { OKLab, HullGeometry } from 'facette';
 import type { RefObject, ElementRef } from 'react';
 import type { OrbitControls } from '@react-three/drei';
@@ -23,6 +24,10 @@ export function OKLabViewer({ controlsRef }: OKLabViewerProps) {
   const { isWarped, toggle } = useMorphToggle();
   const showClipping = useStore((s) => s.showClipping);
   const morphData = useMorphInterpolation();
+  const clippedSet = useMemo(
+    () => showClipping && trace ? new Set(trace.clippedIndices) : null,
+    [showClipping, trace],
+  );
 
   const posMapper = (pos: OKLab): [number, number, number] => oklabToScene(pos);
 
@@ -53,7 +58,7 @@ export function OKLabViewer({ controlsRef }: OKLabViewerProps) {
             positions={morphData.interpolatedPositions}
             positionMapper={posMapper}
             colors={trace?.finalColors ?? []}
-            clippedIndices={showClipping && trace ? new Set(trace.clippedIndices) : null}
+            clippedIndices={clippedSet}
           />
         )}
       </SceneSetup>

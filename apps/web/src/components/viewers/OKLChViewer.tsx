@@ -4,6 +4,7 @@ import { SceneSetup } from './shared/SceneSetup';
 import { AxisHelper } from './shared/AxisHelper';
 import { ParticlePoints } from './shared/ParticlePoints';
 import { oklchToScene } from './transforms/oklchToScene';
+import { useMemo } from 'react';
 import { oklabToOklch } from 'facette';
 import type { OKLab } from 'facette';
 import type { RefObject, ElementRef } from 'react';
@@ -18,6 +19,10 @@ export function OKLChViewer({ controlsRef }: OKLChViewerProps) {
   const showAxes = useStore((s) => s.showAxes);
   const showClipping = useStore((s) => s.showClipping);
   const morphData = useMorphInterpolation();
+  const clippedSet = useMemo(
+    () => showClipping && trace ? new Set(trace.clippedIndices) : null,
+    [showClipping, trace],
+  );
 
   const posMapper = (pos: OKLab): [number, number, number] =>
     oklchToScene(oklabToOklch(pos));
@@ -35,7 +40,7 @@ export function OKLChViewer({ controlsRef }: OKLChViewerProps) {
             positions={morphData.interpolatedPositions}
             positionMapper={posMapper}
             colors={trace?.finalColors ?? []}
-            clippedIndices={showClipping && trace ? new Set(trace.clippedIndices) : null}
+            clippedIndices={clippedSet}
           />
         )}
       </SceneSetup>
